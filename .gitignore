@@ -26,3 +26,11 @@ go.work
 
 # End of https://www.toptal.com/developers/gitignore/api/go
 
+# VSCode
+.vscode
+
+# Database
+*.sqlite
+
+# Configuration
+config.yaml

@@ -20,12 +20,7 @@ type Item struct {
 	BoardID       int64     `json:"boardId"`
 	Title         string    `json:"title"`
 	Description   string    `json:"description"`
-	StateID       int64     `json:"stateId"`
+	Completed     bool      `json:"completed"`
 	CreatedAt     time.Time `json:"createdAt"`
 	LastUpdatedAt time.Time `json:"lastUpdatedAt"`
-}
-
-type State struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
 }

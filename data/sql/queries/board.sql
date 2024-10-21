@@ -18,7 +18,7 @@ WHERE id = ? LIMIT 1;
 UPDATE boards
 SET name = ?,
 last_updated_at = CURRENT_TIMESTAMP
-WHERE id = ?
+WHERE boards.id = ?
 RETURNING *;
 
 -- name: DeleteBoardByID :exec
