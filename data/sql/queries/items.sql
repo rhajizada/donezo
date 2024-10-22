@@ -16,7 +16,7 @@ SET
 WHERE id = ?
 RETURNING *;
 
--- name: DeleteItem :exec
+-- name: DeleteItemByID :exec
 DELETE FROM items
 WHERE id = ?;
 

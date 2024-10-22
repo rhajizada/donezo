@@ -11,7 +11,9 @@ import (
 	"github.com/pressly/goose"
 	"github.com/rhajizada/donezo/internal/config"
 	"github.com/rhajizada/donezo/internal/handler"
+	"github.com/rhajizada/donezo/internal/middleware"
 	"github.com/rhajizada/donezo/internal/repository"
+	"github.com/rhajizada/donezo/internal/router"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -52,18 +54,16 @@ func main() {
 	// Create repository
 	r := repository.New(db)
 
-	// Create h
+	// Create handler
 	h := handler.New(r)
 
-	// Set up the HTTP server and routes.
-	http.HandleFunc("GET /boards", h.ListBoards)
-	http.HandleFunc("GET /board", h.GetBoardByID)
-	http.HandleFunc("POST /board", h.CreateBoard)
+	// Register API routes
+	router := router.RegisterApiRoutes(h)
 
-	// Start the server.
+	// Start the server
 	log.Printf("Server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	if err := http.ListenAndServe(addr, middleware.Logging(router)); err != nil {
 		log.Fatalf("Could not start server: %s\n", err.Error())
 	}
 }

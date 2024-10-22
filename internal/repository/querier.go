@@ -12,7 +12,7 @@ type Querier interface {
 	CreateBoard(ctx context.Context, name string) (Board, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
 	DeleteBoardByID(ctx context.Context, id int64) error
-	DeleteItem(ctx context.Context, id int64) error
+	DeleteItemByID(ctx context.Context, id int64) error
 	GetBoardByID(ctx context.Context, id int64) (Board, error)
 	GetItemByID(ctx context.Context, id int64) (Item, error)
 	ListBoards(ctx context.Context) ([]Board, error)
