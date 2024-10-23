@@ -60,10 +60,13 @@ func main() {
 	// Register API routes
 	router := router.RegisterApiRoutes(h)
 
+	// Add middlewares
+	mdlwr := middleware.CreateStack(middleware.Logging, middleware.AuthMiddleware(cfg.JWTSecret))
+
 	// Start the server
 	log.Printf("Server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)
-	if err := http.ListenAndServe(addr, middleware.Logging(router)); err != nil {
+	if err := http.ListenAndServe(addr, mdlwr(router)); err != nil {
 		log.Fatalf("Could not start server: %s\n", err.Error())
 	}
 }

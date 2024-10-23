@@ -8,8 +8,9 @@ import (
 
 // Config holds the overall configuration.
 type Config struct {
-	Port     int    `koanf:"port"`
-	Database string `koanf:"database"`
+	Port      int    `koanf:"port"`
+	Database  string `koanf:"database"`
+	JWTSecret []byte `koanf:"jwtSecret"`
 }
 
 // Load loads the configuration from the specified file path.
