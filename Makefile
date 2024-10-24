@@ -29,14 +29,14 @@ deps:
 	@go mod download
 
 
-.PHONY: build_image
-## build_image: Build docker image
-build_image:
+.PHONY: build-image
+## build-image: Build docker image
+build-image:
 	@docker build . -t $(IMAGE_NAME):latest
 
-.PHONY: create_volume
-## create_volume: Create docker volume
-create_volume:
+.PHONY: create-volume
+## create-volume: Create docker volume
+create-volume:
 	@if [ "$(shell docker volume ls -q -f name=$(VOLUME_NAME))" = "$(VOLUME_NAME)" ]; then \
 		echo "Volume $(VOLUME_NAME) already exists"; \
 	else \
@@ -44,23 +44,23 @@ create_volume:
 		docker volume create $(VOLUME_NAME); \
 	fi
 
-.PHONY: run_container
-## run_container: Launch a docker container
-run_container: build_image create_volume
+.PHONY: run-container
+## run-container: Launch a docker container
+run-container: build-image create-volume
 	@docker run -d \
 		--name $(CONTAINER_NAME) \
 		-v $(VOLUME_NAME):/data \
 		-p 8000:8000 \
 		$(IMAGE_NAME)
 
-.PHONY: create_token
-## create_token: Create authentication token
-create_token:
+.PHONY: create-token
+## create-token: Create authentication token
+create-token:
 	docker exec -it $(CONTAINER_NAME) create-token
 
 .PHONY: shell
 ## shell: Launch shell inside docker container
-shell: build_image create_volume
+shell: build-image create-volume
 	@docker run --rm -it \
 		--name $(CONTAINER_NAME) \
 		-v $(VOLUME_NAME):/path/in/container \
