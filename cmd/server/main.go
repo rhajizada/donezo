@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", "/app/config.yaml", "Path to configuration file")
+	configPath := flag.String("config", "/etc/donezo/config.yaml", "Path to configuration file")
 	flag.Parse()
 
 	// Load configuration

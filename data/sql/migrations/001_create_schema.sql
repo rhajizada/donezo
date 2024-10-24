@@ -31,6 +31,30 @@ AFTER UPDATE ON items
 BEGIN
     UPDATE items SET last_updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
+
+CREATE TRIGGER update_board_after_item_insert
+AFTER INSERT ON items
+BEGIN
+    UPDATE boards
+    SET last_updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.board_id;
+END;
+
+CREATE TRIGGER update_board_after_item_update
+AFTER UPDATE ON items
+BEGIN
+    UPDATE boards
+    SET last_updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.board_id;
+END;
+
+CREATE TRIGGER update_board_after_item_delete
+AFTER DELETE ON items
+BEGIN
+    UPDATE boards
+    SET last_updated_at = CURRENT_TIMESTAMP
+    WHERE id = OLD.board_id;
+END;
 -- +goose StatementEnd
 
 -- +goose Down
