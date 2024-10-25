@@ -21,6 +21,7 @@ import (
 
 // @title donezo API
 // @description Swagger API documentation for donezo.
+// @version 0.1.0
 
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT

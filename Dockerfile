@@ -7,8 +7,8 @@ ENV CGO_ENABLED=1 \
 WORKDIR /app
 COPY . .
 RUN go mod download
-RUN go build -o create-token ./cmd/create-token
-RUN go build -o server ./cmd/server
+RUN go build -o create-token ./cmd/create-token && \
+  go build -o server ./cmd/server
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates openssl

@@ -55,6 +55,7 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   title: donezo API
+  version: 0.1.0
 paths:
   /api/boards:
     get:
