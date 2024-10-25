@@ -1,4 +1,4 @@
-VOLUME_NAME=donezo_data
+VOLUME_NAME=donezo-data
 IMAGE_NAME=donezo
 CONTAINER_NAME=donezo
 

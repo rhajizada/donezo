@@ -14,7 +14,7 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates openssl
 RUN addgroup -S donezo && adduser -S donezo -G donezo
 WORKDIR /home/donezo/app
-COPY --from=builder /app/data/sql ./data/sql
+COPY --from=builder /app/data/sql/migrations ./data/sql/migrations
 COPY --from=builder /app/create-token .
 COPY --from=builder /app/server .
 RUN mkdir -p /etc/donezo && \
