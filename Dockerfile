@@ -6,8 +6,8 @@ ENV CGO_ENABLED=1 \
   GO111MODULE=on
 WORKDIR /app
 COPY . .
-RUN go mod download
-RUN go build -o create-token ./cmd/create-token && \
+RUN go mod download && \
+  go build -o create-token ./cmd/create-token && \
   go build -o server ./cmd/server
 
 FROM alpine:latest
