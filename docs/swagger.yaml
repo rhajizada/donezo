@@ -1,0 +1,425 @@
+definitions:
+  handler.BoardRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  handler.CreateItemRequest:
+    properties:
+      description:
+        type: string
+      title:
+        type: string
+    type: object
+  handler.UpdateItemRequest:
+    properties:
+      completed:
+        type: boolean
+      description:
+        type: string
+      title:
+        type: string
+    type: object
+  repository.Board:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      lastUpdatedAt:
+        type: string
+      name:
+        type: string
+    type: object
+  repository.Item:
+    properties:
+      boardId:
+        type: integer
+      completed:
+        type: boolean
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      lastUpdatedAt:
+        type: string
+      title:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Swagger API documentation for donezo.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: donezo API
+paths:
+  /api/boards:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all boards
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/repository.Board'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List all boards
+      tags:
+      - boards
+    post:
+      consumes:
+      - application/json
+      description: Create a board with the given name
+      parameters:
+      - description: Board input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.BoardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/repository.Board'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new board
+      tags:
+      - boards
+  /api/boards/{boardId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific board using its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete a board by ID
+      tags:
+      - boards
+    get:
+      consumes:
+      - application/json
+      description: Retrieve details of a specific board using its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/repository.Board'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get a board by ID
+      tags:
+      - boards
+    put:
+      consumes:
+      - application/json
+      description: Update the details of a specific board using its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: Board update input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.BoardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/repository.Board'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update a board by ID
+      tags:
+      - boards
+  /api/boards/{boardId}/items:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of items associated with a specific board
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/repository.Item'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List items for a board
+      tags:
+      - items
+    post:
+      consumes:
+      - application/json
+      description: Add a new item to a specific board using its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: Item input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/repository.Item'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Add an item to a board
+      tags:
+      - items
+  /api/boards/{boardId}/items/{itemId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific item from a board using its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: Item ID
+        in: path
+        name: itemId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete an item by ID
+      tags:
+      - items
+    put:
+      consumes:
+      - application/json
+      description: Update the details of a specific item in a board using its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: boardId
+        required: true
+        type: integer
+      - description: Item ID
+        in: path
+        name: itemId
+        required: true
+        type: integer
+      - description: Item update input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/repository.Item'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update an item by ID
+      tags:
+      - items
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

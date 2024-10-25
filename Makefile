@@ -10,6 +10,17 @@ build:
 	@go build -o create-token ./cmd/create-token
 
 
+.PHONY: swagger
+## swaggger: Genearate swagger docs
+swagger:
+	@swag init -g cmd/server/main.go
+
+
+.PHONY: sqlc
+## sqlc: Generate repository using sqlc
+sqlc:
+	@sqlc generate
+
 .PHONY: run
 ## run: Build and run in development mode
 run: build

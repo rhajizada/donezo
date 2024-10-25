@@ -19,6 +19,17 @@ func New(r *repository.Queries) *Handler {
 	}
 }
 
+// ListBoards godoc
+// @Summary List all boards
+// @Description Get a list of all boards
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} repository.Board
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 500 {object} string
+// @Router /api/boards [get]
 func (h *Handler) ListBoards(w http.ResponseWriter, r *http.Request) {
 	data, err := h.Repo.ListBoards(r.Context())
 	if err != nil {
@@ -34,6 +45,19 @@ func (h *Handler) ListBoards(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CreateBoard godoc
+// @Summary Create a new board
+// @Description Create a board with the given name
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param input body BoardRequest true "Board input"
+// @Success 201 {object} repository.Board
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 500 {object} string
+// @Router /api/boards [post]
 func (h *Handler) CreateBoard(w http.ResponseWriter, r *http.Request) {
 	var input BoardRequest
 	err := json.NewDecoder(r.Body).Decode(&input)
@@ -55,6 +79,20 @@ func (h *Handler) CreateBoard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetBoardByID godoc
+// @Summary Get a board by ID
+// @Description Retrieve details of a specific board using its ID
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param boardId path int true "Board ID"
+// @Success 200 {object} repository.Board
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 404 {object} string "Not Found"
+// @Failure 500 {object} string
+// @Router /api/boards/{boardId} [get]
 func (h *Handler) GetBoardByID(w http.ResponseWriter, r *http.Request) {
 	boardId := r.PathValue("boardId")
 	if boardId == "" {
@@ -78,6 +116,21 @@ func (h *Handler) GetBoardByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateBoardByID godoc
+// @Summary Update a board by ID
+// @Description Update the details of a specific board using its ID
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param boardId path int true "Board ID"
+// @Param input body BoardRequest true "Board update input"
+// @Success 200 {object} repository.Board
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 404 {object} string "Not Found"
+// @Failure 500 {object} string
+// @Router /api/boards/{boardId} [put]
 func (h *Handler) UpdateBoardByID(w http.ResponseWriter, r *http.Request) {
 	boardId := r.PathValue("boardId")
 	var input BoardRequest
@@ -107,6 +160,20 @@ func (h *Handler) UpdateBoardByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteBoardByID godoc
+// @Summary Delete a board by ID
+// @Description Delete a specific board using its ID
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param boardId path int true "Board ID"
+// @Success 200 {object} string
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 404 {object} string "Not Found"
+// @Failure 500 {object} string
+// @Router /api/boards/{boardId} [delete]
 func (h *Handler) DeleteBoardByID(w http.ResponseWriter, r *http.Request) {
 	boardId := r.PathValue("boardId")
 	var input BoardRequest
@@ -132,6 +199,20 @@ func (h *Handler) DeleteBoardByID(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(msg))
 }
 
+// ListItemsByBoardID godoc
+// @Summary List items for a board
+// @Description Get a list of items associated with a specific board
+// @Tags items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param boardId path int true "Board ID"
+// @Success 200 {array} repository.Item
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 404 {object} string "Not Found"
+// @Failure 500 {object} string
+// @Router /api/boards/{boardId}/items [get]
 func (h *Handler) ListItemsByBoardID(w http.ResponseWriter, r *http.Request) {
 	boardId := r.PathValue("boardId")
 
@@ -157,6 +238,21 @@ func (h *Handler) ListItemsByBoardID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// AddItemToBoardByID godoc
+// @Summary Add an item to a board
+// @Description Add a new item to a specific board using its ID
+// @Tags items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param boardId path int true "Board ID"
+// @Param input body CreateItemRequest true "Item input"
+// @Success 201 {object} repository.Item
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 404 {object} string "Not Found"
+// @Failure 500 {object} string
+// @Router /api/boards/{boardId}/items [post]
 func (h *Handler) AddItemToBoardByID(w http.ResponseWriter, r *http.Request) {
 	boardId := r.PathValue("boardId")
 
@@ -196,6 +292,22 @@ func (h *Handler) AddItemToBoardByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateItemByID godoc
+// @Summary Update an item by ID
+// @Description Update the details of a specific item in a board using its ID
+// @Tags items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param boardId path int true "Board ID"
+// @Param itemId path int true "Item ID"
+// @Param input body UpdateItemRequest true "Item update input"
+// @Success 200 {object} repository.Item
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 404 {object} string "Not Found"
+// @Failure 500 {object} string
+// @Router /api/boards/{boardId}/items/{itemId} [put]
 func (h *Handler) UpdateItemById(w http.ResponseWriter, r *http.Request) {
 	boardId := r.PathValue("boardId")
 
@@ -252,6 +364,21 @@ func (h *Handler) UpdateItemById(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteItemByID godoc
+// @Summary Delete an item by ID
+// @Description Delete a specific item from a board using its ID
+// @Tags items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param boardId path int true "Board ID"
+// @Param itemId path int true "Item ID"
+// @Success 200 {object} string
+// @Failure 400 {object} string "Bad Request"
+// @Failure 401 {object} string "Unauthorized"
+// @Failure 404 {object} string "Not Found"
+// @Failure 500 {object} string
+// @Router /api/boards/{boardId}/items/{itemId} [delete]
 func (h *Handler) DeleteItemByID(w http.ResponseWriter, r *http.Request) {
 	boardId := r.PathValue("boardId")
 

@@ -14,10 +14,20 @@ import (
 	"github.com/rhajizada/donezo/internal/middleware"
 	"github.com/rhajizada/donezo/internal/repository"
 	"github.com/rhajizada/donezo/internal/router"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// @title donezo API
+// @description Swagger API documentation for donezo.
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	configPath := flag.String("config", "/etc/donezo/config.yaml", "Path to configuration file")
 	flag.Parse()
@@ -52,21 +62,23 @@ func main() {
 	}
 
 	// Create repository
-	r := repository.New(db)
+	rq := repository.New(db)
 
 	// Create handler
-	h := handler.New(r)
+	h := handler.New(rq)
 
 	// Register API routes
-	router := router.RegisterApiRoutes(h)
-
-	// Add middlewares
-	mdlwr := middleware.CreateStack(middleware.Logging, middleware.AuthMiddleware(cfg.JWTSecret))
+	r := http.NewServeMux()
+	ar := router.RegisterApiRoutes(h)
+	am := middleware.AuthMiddleware(cfg.JWTSecret)
+	r.Handle("/api/", http.StripPrefix("/api", am(ar)))
+	r.Handle("/swagger/", httpSwagger.WrapHandler)
+	lm := middleware.Logging(r)
 
 	// Start the server
 	log.Printf("Server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)
-	if err := http.ListenAndServe(addr, mdlwr(router)); err != nil {
+	if err := http.ListenAndServe(addr, lm); err != nil {
 		log.Fatalf("Could not start server: %s\n", err.Error())
 	}
 }
