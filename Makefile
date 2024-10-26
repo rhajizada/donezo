@@ -69,7 +69,7 @@ run-container: build-image create-volume
 .PHONY: create-token
 ## create-token: Create authentication token
 create-token:
-	docker exec -it $(CONTAINER_NAME) create-token
+	docker exec -it $(CONTAINER_NAME) create-token $(ARGS)
 
 .PHONY: shell
 ## shell: Launch shell inside docker container
