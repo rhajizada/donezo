@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -38,6 +39,7 @@ type listKeyMap struct {
 	deleteItem       key.Binding
 	refreshList      key.Binding
 	nextBoard        key.Binding
+	renameItem       key.Binding
 }
 
 func newListKeyMap() *listKeyMap {
@@ -57,6 +59,10 @@ func newListKeyMap() *listKeyMap {
 		nextBoard: key.NewBinding(
 			key.WithKeys("tab"),
 			key.WithHelp("tab", "switch board"),
+		),
+		renameItem: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "rename item"),
 		),
 		toggleSpinner: key.NewBinding(
 			key.WithKeys("S"),
@@ -92,6 +98,10 @@ type itemsLoadedMsg struct {
 	items []repository.Item
 }
 
+type updateItemMsg struct {
+	err error
+}
+
 // Model defines the UI model.
 type Model struct {
 	Client       *client.Client
@@ -100,6 +110,14 @@ type Model struct {
 	List         list.Model
 	Keys         *listKeyMap
 	DelegateKeys *delegateKeyMap
+
+	// Input states
+	renaming     bool
+	enteringName bool
+	enteringDesc bool
+	tempName     string
+	tempDesc     string
+	textInput    textinput.Model
 }
 
 // NewModel initializes a new UI model.
@@ -122,17 +140,23 @@ func NewModel(cli *client.Client) *Model {
 	m.List.Styles.Title = titleStyle
 	m.List.AdditionalFullHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			listKeys.toggleSpinner,
 			listKeys.insertItem,
 			listKeys.deleteItem,
 			listKeys.refreshList,
 			listKeys.nextBoard,
+			listKeys.renameItem,
+			listKeys.toggleSpinner,
 			listKeys.toggleTitleBar,
 			listKeys.toggleStatusBar,
 			listKeys.togglePagination,
 			listKeys.toggleHelpMenu,
 		}
 	}
+
+	// Initialize text input
+	m.textInput = textinput.New()
+	m.textInput.CharLimit = 256
+	m.textInput.Width = 50
 
 	return m
 }
@@ -182,6 +206,45 @@ func convertToListItems(items []repository.Item) []list.Item {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	if m.renaming {
+		var cmd tea.Cmd
+		m.textInput, cmd = m.textInput.Update(msg)
+		cmds = append(cmds, cmd)
+
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				if m.enteringName {
+					m.tempName = m.textInput.Value()
+					m.enteringName = false
+					m.enteringDesc = true
+					m.textInput.Placeholder = "Enter new item description"
+					m.textInput.SetValue("")
+					m.textInput.Focus()
+				} else if m.enteringDesc {
+					m.tempDesc = m.textInput.Value()
+					m.enteringDesc = false
+					m.renaming = false
+					m.textInput.Blur()
+					// Proceed to update the item
+					index := m.List.Index()
+					if index >= 0 && index < len(m.List.Items()) {
+						item := m.List.SelectedItem().(Item)
+						return m, m.updateItem(&item.Item, m.tempName, m.tempDesc)
+					}
+				}
+			case tea.KeyEsc:
+				// Cancel the renaming process
+				m.renaming = false
+				m.enteringName = false
+				m.enteringDesc = false
+				m.textInput.Blur()
+			}
+		}
+		return m, tea.Batch(cmds...)
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, v := appStyle.GetFrameSize()
@@ -196,7 +259,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case itemsLoadedMsg:
 		m.List.SetItems(convertToListItems(msg.items))
-		// Optionally, you can add a status message or perform additional actions
+
+	case updateItemMsg:
+		if msg.err != nil {
+			cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle(fmt.Sprintf("Error updating item: %v", msg.err))))
+		} else {
+			cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("Item updated")))
+			// Refresh the list to show updated item
+			return m, m.fetchItems()
+		}
+		return m, tea.Batch(cmds...)
 
 	case tea.KeyMsg:
 		// Don't match any of the keys below if we're actively filtering.
@@ -205,6 +277,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
+		case key.Matches(msg, m.Keys.renameItem):
+			if len(m.List.Items()) == 0 {
+				cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("No item selected")))
+				return m, tea.Batch(cmds...)
+			}
+			m.renaming = true
+			m.enteringName = true
+			m.textInput.Placeholder = "Enter new item name"
+			m.textInput.SetValue("")
+			m.textInput.Focus()
+			return m, nil
+
 		case key.Matches(msg, m.Keys.toggleSpinner):
 			cmd := m.List.ToggleSpinner()
 			return m, cmd
@@ -274,5 +358,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
+	if m.renaming {
+		return appStyle.Render(m.textInput.View())
+	}
 	return appStyle.Render(m.List.View())
+}
+
+// Implement updateItem command
+func (m *Model) updateItem(item *repository.Item, newName, newDesc string) tea.Cmd {
+	return func() tea.Msg {
+		item.Title = newName
+		item.Description = newDesc
+		_, err := m.Client.UpdateItem(item)
+		return updateItemMsg{err: err}
+	}
 }
