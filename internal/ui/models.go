@@ -43,6 +43,7 @@ type listKeyMap struct {
 	ToggleTitleBar   key.Binding
 	ToggleStatusBar  key.Binding
 	TogglePagination key.Binding
+	ToggleComplete   key.Binding // Added this line
 
 	// Help toggle key bindings
 	ToggleHelpMenu    key.Binding
@@ -91,6 +92,10 @@ func newListKeyMap() *listKeyMap {
 			key.WithKeys("P"),
 			key.WithHelp("P", "toggle pagination"),
 		),
+		ToggleComplete: key.NewBinding( // Added this block
+			key.WithKeys(" "),
+			key.WithHelp("space", "toggle complete"),
+		),
 		ToggleHelpMenu: key.NewBinding(
 			key.WithKeys("H"),
 			key.WithHelp("H", "toggle help"),
@@ -114,8 +119,8 @@ func (k listKeyMap) ShortHelp() []key.Binding {
 		k.DeleteItem,
 		k.RenameItem,
 		k.RefreshList,
+		k.ToggleComplete, // Added this line
 		k.ToggleHelpMenu,
-		k.ToggleHelpMenuAlt,
 		k.Quit,
 	}
 }
@@ -133,6 +138,7 @@ func (k listKeyMap) FullHelp() [][]key.Binding {
 		k.ToggleTitleBar,
 		k.ToggleStatusBar,
 		k.TogglePagination,
+		k.ToggleComplete, // Added this line
 		k.ToggleHelpMenu,
 		k.ToggleHelpMenuAlt,
 		k.Quit,
@@ -356,8 +362,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle(fmt.Sprintf("Error updating item: %v", msg.err))))
 		} else {
 			cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("Item updated")))
-			// Refresh the list to show updated item
-			return m, m.fetchItems()
+			// No need to refresh the list here since we're updating the item directly
 		}
 		return m, tea.Batch(cmds...)
 
@@ -455,6 +460,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, tea.Batch(cmds...)
+
+		case key.Matches(msg, m.Keys.ToggleComplete): // Added this case
+			index := m.List.Index()
+			if index >= 0 && index < len(m.List.Items()) {
+				item := m.List.Items()[index].(Item)
+				return m, m.toggleItemCompletion(index, item)
+			}
 		}
 	}
 
@@ -500,5 +512,20 @@ func (m *Model) addItem(board *repository.Board, name, desc string) tea.Cmd {
 			return addItemMsg{err: err}
 		}
 		return addItemMsg{item: *newItem}
+	}
+}
+
+// Implement toggleItemCompletion command
+func (m *Model) toggleItemCompletion(index int, item Item) tea.Cmd {
+	// Toggle the completion status
+	item.Completed = !item.Completed
+	// Update the item in the list
+	m.List.SetItem(index, item)
+	return func() tea.Msg {
+		_, err := m.Client.UpdateItem(&item.Item)
+		if err != nil {
+			return errMsg{err}
+		}
+		return updateItemMsg{err: nil}
 	}
 }
