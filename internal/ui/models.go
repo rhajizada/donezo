@@ -1,3 +1,4 @@
+// models.go
 package ui
 
 import (
@@ -51,6 +52,9 @@ type listKeyMap struct {
 
 	// Quit key binding
 	Quit key.Binding
+
+	// Choose key binding
+	Choose key.Binding
 }
 
 // newListKeyMap initializes a new listKeyMap with custom bindings.
@@ -108,6 +112,10 @@ func newListKeyMap() *listKeyMap {
 			key.WithKeys("q", "esc"),
 			key.WithHelp("q", "quit"),
 		),
+		Choose: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "choose item"),
+		),
 	}
 }
 
@@ -121,6 +129,7 @@ func (k listKeyMap) ShortHelp() []key.Binding {
 		k.RefreshList,
 		k.ToggleComplete, // Added this line
 		k.ToggleHelpMenu,
+		k.Choose,
 		k.Quit,
 	}
 }
@@ -141,6 +150,7 @@ func (k listKeyMap) FullHelp() [][]key.Binding {
 		k.ToggleComplete, // Added this line
 		k.ToggleHelpMenu,
 		k.ToggleHelpMenuAlt,
+		k.Choose,
 		k.Quit,
 	}
 
@@ -198,7 +208,6 @@ type Model struct {
 	CurrentBoard int
 	List         list.Model
 	Keys         *listKeyMap
-	DelegateKeys *delegateKeyMap
 
 	// Input states
 	renaming     bool
@@ -216,11 +225,10 @@ type Model struct {
 
 // NewModel initializes a new UI model.
 func NewModel(cli *client.Client) *Model {
-	delegateKeys := newDelegateKeyMap()
 	listKeys := newListKeyMap()
 
-	// Initialize list
-	delegate := newItemDelegate(delegateKeys)
+	// Initialize list with custom delegate
+	delegate := newItemDelegate(listKeys)
 	l := list.New(nil, delegate, 0, 0)
 	l.Title = "Loading boards..."
 	l.Styles.Title = titleStyle
@@ -234,13 +242,12 @@ func NewModel(cli *client.Client) *Model {
 	h := help.New()
 
 	m := &Model{
-		Client:       cli,
-		Keys:         listKeys,
-		DelegateKeys: delegateKeys,
-		List:         l,
-		textInput:    ti,
-		help:         h,
-		showHelp:     false,
+		Client:    cli,
+		Keys:      listKeys,
+		List:      l,
+		textInput: ti,
+		help:      h,
+		showHelp:  false,
 	}
 
 	return m
