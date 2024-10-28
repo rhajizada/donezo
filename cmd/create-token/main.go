@@ -15,7 +15,7 @@ func main() {
 	flag.Parse()
 
 	// Load configuration
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.LoadServerConfig(*configPath)
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
