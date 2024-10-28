@@ -2,7 +2,9 @@ package ui
 
 import (
 	"fmt"
+	"math"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -29,67 +31,138 @@ func StatusMessageStyle(msg string) string {
 		Render(msg)
 }
 
+// listKeyMap defines custom key bindings and implements help.KeyMap interface.
 type listKeyMap struct {
-	toggleSpinner    key.Binding
-	toggleTitleBar   key.Binding
-	toggleStatusBar  key.Binding
-	togglePagination key.Binding
-	toggleHelpMenu   key.Binding
-	insertItem       key.Binding
-	deleteItem       key.Binding
-	refreshList      key.Binding
-	nextBoard        key.Binding
-	prevBoard        key.Binding // Added key binding for previous board
-	renameItem       key.Binding
+	// Custom key bindings
+	InsertItem       key.Binding
+	DeleteItem       key.Binding
+	RenameItem       key.Binding
+	RefreshList      key.Binding
+	NextBoard        key.Binding
+	PrevBoard        key.Binding
+	ToggleTitleBar   key.Binding
+	ToggleStatusBar  key.Binding
+	TogglePagination key.Binding
+
+	// Help toggle key bindings
+	ToggleHelpMenu    key.Binding
+	ToggleHelpMenuAlt key.Binding
+
+	// Quit key binding
+	Quit key.Binding
 }
 
+// newListKeyMap initializes a new listKeyMap with custom bindings.
 func newListKeyMap() *listKeyMap {
 	return &listKeyMap{
-		insertItem: key.NewBinding(
+		InsertItem: key.NewBinding(
 			key.WithKeys("a"),
 			key.WithHelp("a", "add item"),
 		),
-		deleteItem: key.NewBinding(
+		DeleteItem: key.NewBinding(
 			key.WithKeys("d"),
 			key.WithHelp("d", "delete item"),
 		),
-		refreshList: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp("s", "refresh list"),
-		),
-		nextBoard: key.NewBinding(
-			key.WithKeys("tab"),
-			key.WithHelp("tab", "next board"),
-		),
-		prevBoard: key.NewBinding(
-			key.WithKeys("shift+tab"),
-			key.WithHelp("shift+tab", "prev board"),
-		),
-		renameItem: key.NewBinding(
+		RenameItem: key.NewBinding(
 			key.WithKeys("r"),
 			key.WithHelp("r", "rename item"),
 		),
-		toggleSpinner: key.NewBinding(
-			key.WithKeys("S"),
-			key.WithHelp("S", "toggle spinner"),
+		RefreshList: key.NewBinding(
+			key.WithKeys("R"),
+			key.WithHelp("R", "refresh board"),
 		),
-		toggleTitleBar: key.NewBinding(
+		NextBoard: key.NewBinding(
+			key.WithKeys("tab"),
+			key.WithHelp("tab", "next board"),
+		),
+		PrevBoard: key.NewBinding(
+			key.WithKeys("shift+tab"),
+			key.WithHelp("shift+tab", "prev board"),
+		),
+		ToggleTitleBar: key.NewBinding(
 			key.WithKeys("T"),
 			key.WithHelp("T", "toggle title"),
 		),
-		toggleStatusBar: key.NewBinding(
+		ToggleStatusBar: key.NewBinding(
 			key.WithKeys("B"),
 			key.WithHelp("B", "toggle status"),
 		),
-		togglePagination: key.NewBinding(
+		TogglePagination: key.NewBinding(
 			key.WithKeys("P"),
 			key.WithHelp("P", "toggle pagination"),
 		),
-		toggleHelpMenu: key.NewBinding(
+		ToggleHelpMenu: key.NewBinding(
 			key.WithKeys("H"),
 			key.WithHelp("H", "toggle help"),
 		),
+		ToggleHelpMenuAlt: key.NewBinding(
+			key.WithKeys("?"),
+			key.WithHelp("?", "toggle help"),
+		),
+		Quit: key.NewBinding(
+			key.WithKeys("q", "esc"),
+			key.WithHelp("q", "quit"),
+		),
 	}
+}
+
+// ShortHelp returns keybindings to be shown in the mini help view.
+// It's part of the help.KeyMap interface.
+func (k listKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{
+		k.InsertItem,
+		k.DeleteItem,
+		k.RenameItem,
+		k.RefreshList,
+		k.ToggleHelpMenu,
+		k.ToggleHelpMenuAlt,
+		k.Quit,
+	}
+}
+
+// FullHelp returns keybindings for the expanded help view.
+// It's part of the help.KeyMap interface.
+func (k listKeyMap) FullHelp() [][]key.Binding {
+	allKeys := []key.Binding{
+		k.InsertItem,
+		k.DeleteItem,
+		k.RenameItem,
+		k.RefreshList,
+		k.NextBoard,
+		k.PrevBoard,
+		k.ToggleTitleBar,
+		k.ToggleStatusBar,
+		k.TogglePagination,
+		k.ToggleHelpMenu,
+		k.ToggleHelpMenuAlt,
+		k.Quit,
+	}
+
+	numCols := 3 // Define the number of columns you want
+	totalKeys := len(allKeys)
+	numRows := int(math.Ceil(float64(totalKeys) / float64(numCols)))
+
+	columns := make([][]key.Binding, numCols)
+	for i := 0; i < numCols; i++ {
+		columns[i] = make([]key.Binding, 0, numRows)
+	}
+
+	for i, kb := range allKeys {
+		col := i / numRows
+		if col >= numCols {
+			col = numCols - 1
+		}
+		columns[col] = append(columns[col], kb)
+	}
+
+	// Pad columns with empty key bindings to ensure uniform rows
+	for i := 0; i < numCols; i++ {
+		for len(columns[i]) < numRows {
+			columns[i] = append(columns[i], key.Binding{}) // Empty binding
+		}
+	}
+
+	return columns
 }
 
 // Message types
@@ -129,46 +202,40 @@ type Model struct {
 	tempName     string
 	tempDesc     string
 	textInput    textinput.Model
+
+	// Help
+	help     help.Model
+	showHelp bool
 }
 
 // NewModel initializes a new UI model.
 func NewModel(cli *client.Client) *Model {
-	var (
-		delegateKeys = newDelegateKeyMap()
-		listKeys     = newListKeyMap()
-	)
+	delegateKeys := newDelegateKeyMap()
+	listKeys := newListKeyMap()
+
+	// Initialize list
+	delegate := newItemDelegate(delegateKeys)
+	l := list.New(nil, delegate, 0, 0)
+	l.Title = "Loading boards..."
+	l.Styles.Title = titleStyle
+
+	// Initialize text input
+	ti := textinput.New()
+	ti.CharLimit = 256
+	ti.Width = 50
+
+	// Initialize help
+	h := help.New()
 
 	m := &Model{
 		Client:       cli,
 		Keys:         listKeys,
 		DelegateKeys: delegateKeys,
+		List:         l,
+		textInput:    ti,
+		help:         h,
+		showHelp:     false,
 	}
-
-	// Initialize list
-	delegate := newItemDelegate(delegateKeys)
-	m.List = list.New(nil, delegate, 0, 0)
-	m.List.Title = "Loading boards..."
-	m.List.Styles.Title = titleStyle
-	m.List.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			listKeys.insertItem,
-			listKeys.deleteItem,
-			listKeys.refreshList,
-			listKeys.nextBoard,
-			listKeys.prevBoard, // Added to help menu
-			listKeys.renameItem,
-			listKeys.toggleSpinner,
-			listKeys.toggleTitleBar,
-			listKeys.toggleStatusBar,
-			listKeys.togglePagination,
-			listKeys.toggleHelpMenu,
-		}
-	}
-
-	// Initialize text input
-	m.textInput = textinput.New()
-	m.textInput.CharLimit = 256
-	m.textInput.Width = 50
 
 	return m
 }
@@ -207,6 +274,7 @@ func (m *Model) fetchItems() tea.Cmd {
 	}
 }
 
+// convertToListItems converts repository items to list.Items
 func convertToListItems(items []repository.Item) []list.Item {
 	l := make([]list.Item, len(items))
 	for i, item := range items {
@@ -215,9 +283,11 @@ func convertToListItems(items []repository.Item) []list.Item {
 	return l
 }
 
+// Update handles incoming messages and updates the model accordingly.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	// Handle input states: renaming or adding
 	if m.renaming || m.adding {
 		var cmd tea.Cmd
 		m.textInput, cmd = m.textInput.Update(msg)
@@ -269,6 +339,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		h, v := appStyle.GetFrameSize()
 		m.List.SetSize(msg.Width-h, msg.Height-v)
+		m.help.Width = msg.Width / 2 // Adjust help width as needed
 
 	case errMsg:
 		cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle(fmt.Sprintf("Error: %v", msg.err))))
@@ -300,13 +371,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 
 	case tea.KeyMsg:
+		// Handle help menu toggle with both H and ?
+		if key.Matches(msg, m.Keys.ToggleHelpMenu) || key.Matches(msg, m.Keys.ToggleHelpMenuAlt) {
+			m.showHelp = !m.showHelp
+			m.help.ShowAll = m.showHelp // Synchronize ShowAll flag
+			return m, nil
+		}
+
 		// Don't match any of the keys below if we're actively filtering.
 		if m.List.FilterState() == list.Filtering {
 			break
 		}
 
 		switch {
-		case key.Matches(msg, m.Keys.renameItem):
+		case key.Matches(msg, m.Keys.RenameItem):
 			if len(m.List.Items()) == 0 {
 				cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("No item selected")))
 				return m, tea.Batch(cmds...)
@@ -318,7 +396,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textInput.Focus()
 			return m, nil
 
-		case key.Matches(msg, m.Keys.insertItem):
+		case key.Matches(msg, m.Keys.InsertItem):
 			m.adding = true
 			m.enteringName = true
 			m.textInput.Placeholder = "Enter item name"
@@ -326,34 +404,37 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textInput.Focus()
 			return m, nil
 
-		case key.Matches(msg, m.Keys.toggleSpinner):
-			cmd := m.List.ToggleSpinner()
-			return m, cmd
+		case key.Matches(msg, m.Keys.RefreshList):
+			return m, m.fetchItems()
 
-		case key.Matches(msg, m.Keys.toggleTitleBar):
+		case key.Matches(msg, m.Keys.ToggleTitleBar):
 			v := !m.List.ShowTitle()
 			m.List.SetShowTitle(v)
 			m.List.SetShowFilter(v)
 			m.List.SetFilteringEnabled(v)
 			return m, nil
 
-		case key.Matches(msg, m.Keys.toggleStatusBar):
+		case key.Matches(msg, m.Keys.ToggleStatusBar):
 			m.List.SetShowStatusBar(!m.List.ShowStatusBar())
 			return m, nil
 
-		case key.Matches(msg, m.Keys.togglePagination):
+		case key.Matches(msg, m.Keys.TogglePagination):
 			m.List.SetShowPagination(!m.List.ShowPagination())
 			return m, nil
 
-		case key.Matches(msg, m.Keys.toggleHelpMenu):
-			m.List.SetShowHelp(!m.List.ShowHelp())
-			return m, nil
-
-		case key.Matches(msg, m.Keys.nextBoard):
+		case key.Matches(msg, m.Keys.NextBoard):
+			if len(m.Boards) == 0 {
+				cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("No boards available")))
+				return m, tea.Batch(cmds...)
+			}
 			m.CurrentBoard = (m.CurrentBoard + 1) % len(m.Boards)
 			return m, m.fetchItems()
 
-		case key.Matches(msg, m.Keys.prevBoard):
+		case key.Matches(msg, m.Keys.PrevBoard):
+			if len(m.Boards) == 0 {
+				cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("No boards available")))
+				return m, tea.Batch(cmds...)
+			}
 			if m.CurrentBoard == 0 {
 				m.CurrentBoard = len(m.Boards) - 1
 			} else {
@@ -361,10 +442,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, m.fetchItems()
 
-		case key.Matches(msg, m.Keys.refreshList):
-			return m, m.fetchItems()
-
-		case key.Matches(msg, m.Keys.deleteItem):
+		case key.Matches(msg, m.Keys.DeleteItem):
 			index := m.List.Index()
 			if index >= 0 && index < len(m.List.Items()) {
 				item := m.List.SelectedItem().(Item)
@@ -388,11 +466,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// View renders the UI.
 func (m *Model) View() string {
 	if m.renaming || m.adding {
 		return appStyle.Render(m.textInput.View())
 	}
-	return appStyle.Render(m.List.View())
+
+	view := m.List.View()
+
+	if m.showHelp {
+		helpView := m.help.View(m.Keys)
+		view += "\n\n" + appStyle.Render(helpView)
+	}
+
+	return appStyle.Render(view)
 }
 
 // Implement updateItem command
