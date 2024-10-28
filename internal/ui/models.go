@@ -39,6 +39,7 @@ type listKeyMap struct {
 	deleteItem       key.Binding
 	refreshList      key.Binding
 	nextBoard        key.Binding
+	prevBoard        key.Binding // Added key binding for previous board
 	renameItem       key.Binding
 }
 
@@ -58,7 +59,11 @@ func newListKeyMap() *listKeyMap {
 		),
 		nextBoard: key.NewBinding(
 			key.WithKeys("tab"),
-			key.WithHelp("tab", "switch board"),
+			key.WithHelp("tab", "next board"),
+		),
+		prevBoard: key.NewBinding(
+			key.WithKeys("shift+tab"),
+			key.WithHelp("shift+tab", "prev board"),
 		),
 		renameItem: key.NewBinding(
 			key.WithKeys("r"),
@@ -102,6 +107,11 @@ type updateItemMsg struct {
 	err error
 }
 
+type addItemMsg struct {
+	item repository.Item
+	err  error
+}
+
 // Model defines the UI model.
 type Model struct {
 	Client       *client.Client
@@ -113,6 +123,7 @@ type Model struct {
 
 	// Input states
 	renaming     bool
+	adding       bool // Added for tracking adding state
 	enteringName bool
 	enteringDesc bool
 	tempName     string
@@ -144,6 +155,7 @@ func NewModel(cli *client.Client) *Model {
 			listKeys.deleteItem,
 			listKeys.refreshList,
 			listKeys.nextBoard,
+			listKeys.prevBoard, // Added to help menu
 			listKeys.renameItem,
 			listKeys.toggleSpinner,
 			listKeys.toggleTitleBar,
@@ -177,7 +189,7 @@ func (m *Model) fetchBoards() tea.Cmd {
 		if len(m.Boards) == 0 {
 			return errMsg{fmt.Errorf("no boards available")}
 		}
-		m.CurrentBoard = 0
+		m.CurrentBoard = len(m.Boards) - 1 // Open the board with the last ID
 		return boardsLoadedMsg{}
 	}
 }
@@ -206,7 +218,7 @@ func convertToListItems(items []repository.Item) []list.Item {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	if m.renaming {
+	if m.renaming || m.adding {
 		var cmd tea.Cmd
 		m.textInput, cmd = m.textInput.Update(msg)
 		cmds = append(cmds, cmd)
@@ -219,24 +231,32 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.tempName = m.textInput.Value()
 					m.enteringName = false
 					m.enteringDesc = true
-					m.textInput.Placeholder = "Enter new item description"
+					m.textInput.Placeholder = "Enter item description"
 					m.textInput.SetValue("")
 					m.textInput.Focus()
 				} else if m.enteringDesc {
 					m.tempDesc = m.textInput.Value()
 					m.enteringDesc = false
-					m.renaming = false
 					m.textInput.Blur()
-					// Proceed to update the item
-					index := m.List.Index()
-					if index >= 0 && index < len(m.List.Items()) {
-						item := m.List.SelectedItem().(Item)
-						return m, m.updateItem(&item.Item, m.tempName, m.tempDesc)
+					if m.renaming {
+						m.renaming = false
+						// Proceed to update the item
+						index := m.List.Index()
+						if index >= 0 && index < len(m.List.Items()) {
+							item := m.List.SelectedItem().(Item)
+							return m, m.updateItem(&item.Item, m.tempName, m.tempDesc)
+						}
+					} else if m.adding {
+						m.adding = false
+						// Proceed to add the item
+						board := m.Boards[m.CurrentBoard]
+						return m, m.addItem(&board, m.tempName, m.tempDesc)
 					}
 				}
 			case tea.KeyEsc:
-				// Cancel the renaming process
+				// Cancel the renaming or adding process
 				m.renaming = false
+				m.adding = false
 				m.enteringName = false
 				m.enteringDesc = false
 				m.textInput.Blur()
@@ -270,6 +290,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
+	case addItemMsg:
+		if msg.err != nil {
+			cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle(fmt.Sprintf("Error adding item: %v", msg.err))))
+		} else {
+			m.List.InsertItem(0, Item{Item: msg.item})
+			cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("Item added")))
+		}
+		return m, tea.Batch(cmds...)
+
 	case tea.KeyMsg:
 		// Don't match any of the keys below if we're actively filtering.
 		if m.List.FilterState() == list.Filtering {
@@ -285,6 +314,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.renaming = true
 			m.enteringName = true
 			m.textInput.Placeholder = "Enter new item name"
+			m.textInput.SetValue("")
+			m.textInput.Focus()
+			return m, nil
+
+		case key.Matches(msg, m.Keys.insertItem):
+			m.adding = true
+			m.enteringName = true
+			m.textInput.Placeholder = "Enter item name"
 			m.textInput.SetValue("")
 			m.textInput.Focus()
 			return m, nil
@@ -316,22 +353,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.CurrentBoard = (m.CurrentBoard + 1) % len(m.Boards)
 			return m, m.fetchItems()
 
-		case key.Matches(msg, m.Keys.refreshList):
+		case key.Matches(msg, m.Keys.prevBoard):
+			if m.CurrentBoard == 0 {
+				m.CurrentBoard = len(m.Boards) - 1
+			} else {
+				m.CurrentBoard--
+			}
 			return m, m.fetchItems()
 
-		case key.Matches(msg, m.Keys.insertItem):
-			board := m.Boards[m.CurrentBoard]
-			// For simplicity, we use static values; you can modify to accept user input.
-			newItemTitle := "New Item"
-			newItemDescription := "Description"
-			newItem, err := m.Client.AddItem(&board, newItemTitle, newItemDescription)
-			if err != nil {
-				cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle(fmt.Sprintf("Error adding item: %v", err))))
-			} else {
-				m.List.InsertItem(0, Item{Item: *newItem})
-				cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle("Item added")))
-			}
-			return m, tea.Batch(cmds...)
+		case key.Matches(msg, m.Keys.refreshList):
+			return m, m.fetchItems()
 
 		case key.Matches(msg, m.Keys.deleteItem):
 			index := m.List.Index()
@@ -358,7 +389,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	if m.renaming {
+	if m.renaming || m.adding {
 		return appStyle.Render(m.textInput.View())
 	}
 	return appStyle.Render(m.List.View())
@@ -371,5 +402,16 @@ func (m *Model) updateItem(item *repository.Item, newName, newDesc string) tea.C
 		item.Description = newDesc
 		_, err := m.Client.UpdateItem(item)
 		return updateItemMsg{err: err}
+	}
+}
+
+// Implement addItem command
+func (m *Model) addItem(board *repository.Board, name, desc string) tea.Cmd {
+	return func() tea.Msg {
+		newItem, err := m.Client.AddItem(board, name, desc)
+		if err != nil {
+			return addItemMsg{err: err}
+		}
+		return addItemMsg{item: *newItem}
 	}
 }
