@@ -74,6 +74,7 @@ func main() {
 	am := middleware.AuthMiddleware(cfg.JWTSecret)
 	r.Handle("/api/", http.StripPrefix("/api", am(ar)))
 	r.Handle("/swagger/", httpSwagger.WrapHandler)
+	r.HandleFunc("/healthz/", handler.Healthz)
 	lm := middleware.Logging(r)
 
 	// Start the server

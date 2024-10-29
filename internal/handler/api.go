@@ -248,8 +248,7 @@ func (h *Handler) ListItemsByBoardID(w http.ResponseWriter, r *http.Request) {
 // @Param boardId path int true "Board ID"
 // @Param input body CreateItemRequest true "Item input"
 // @Success 201 {object} repository.Item
-// @Failure 400 {object} string "Bad Request"
-// @Failure 401 {object} string "Unauthorized"
+// @Failure 400 {object} string "Bad Request" @Failure 401 {object} string "Unauthorized"
 // @Failure 404 {object} string "Not Found"
 // @Failure 500 {object} string
 // @Router /api/boards/{boardId}/items [post]

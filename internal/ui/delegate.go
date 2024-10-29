@@ -126,7 +126,7 @@ func newItemDelegate(keys *listKeyMap) list.ItemDelegate {
 	d := NewDelegate()
 
 	// Define UpdateFunc to handle key bindings within the delegate
-	d.DefaultDelegate.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
+	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			if key.Matches(msg, keys.Choose) {
@@ -142,13 +142,13 @@ func newItemDelegate(keys *listKeyMap) list.ItemDelegate {
 	}
 
 	// Define short and full help
-	d.DefaultDelegate.ShortHelpFunc = func() []key.Binding {
+	d.ShortHelpFunc = func() []key.Binding {
 		return []key.Binding{
 			keys.Choose,
 		}
 	}
 
-	d.DefaultDelegate.FullHelpFunc = func() [][]key.Binding {
+	d.FullHelpFunc = func() [][]key.Binding {
 		return [][]key.Binding{
 			{keys.Choose},
 		}

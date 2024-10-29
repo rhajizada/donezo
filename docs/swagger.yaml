@@ -11,6 +11,11 @@ definitions:
       title:
         type: string
     type: object
+  handler.HealthResponse:
+    properties:
+      status:
+        type: string
+    type: object
   handler.UpdateItemRequest:
     properties:
       completed:
@@ -305,11 +310,7 @@ paths:
           schema:
             $ref: '#/definitions/repository.Item'
         "400":
-          description: Bad Request
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
+          description: Bad Request" @Failure 401 {object} string "Unauthorized
           schema:
             type: string
         "404":
@@ -418,6 +419,23 @@ paths:
       summary: Update an item by ID
       tags:
       - items
+  /healthz:
+    get:
+      description: Get service health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.HealthResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Check health
 securityDefinitions:
   BearerAuth:
     in: header
