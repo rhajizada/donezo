@@ -5,19 +5,11 @@ import (
 	"net/http"
 )
 
-type HealthResponse struct {
-	Status string `json:"status"`
-}
-
-var DefaultHealthResponse = HealthResponse{
-	Status: "healthy",
-}
-
 // Healthz godoc
 // @Summary Check health
 // @Description Get service health status
 // @Produce json
-// @Success 200 {array} HealthResponse
+// @Success 200 {array} StatusResponse
 // @Failure 500 {object} string
 // @Router /healthz [get]
 func Healthz(w http.ResponseWriter, r *http.Request) {

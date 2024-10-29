@@ -611,6 +611,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/token/validate": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Checks if token supplied in the header is valid",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "token"
+                ],
+                "summary": "Validate token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.StatusResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/healthz": {
             "get": {
                 "description": "Get service health status",
@@ -624,7 +661,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/handler.HealthResponse"
+                                "$ref": "#/definitions/handler.StatusResponse"
                             }
                         }
                     },
@@ -658,7 +695,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.HealthResponse": {
+        "handler.StatusResponse": {
             "type": "object",
             "properties": {
                 "status": {

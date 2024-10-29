@@ -17,3 +17,15 @@ type UpdateItemRequest struct {
 type TokenResponse struct {
 	Token string `json:"token"`
 }
+
+type StatusResponse struct {
+	Status string `json:"status"`
+}
+
+var DefaultHealthResponse = StatusResponse{
+	Status: "healthy",
+}
+
+var ValidTokenResponse = StatusResponse{
+	Status: "token in valid",
+}
