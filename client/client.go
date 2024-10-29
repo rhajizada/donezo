@@ -48,6 +48,31 @@ func (c *Client) NewRequest(method string, url string, body io.Reader) (*http.Re
 	return req, nil
 }
 
+// Healthy returns service health status
+func (c *Client) Healthy() error {
+	reqURL, err := url.Parse(c.BaseURL + "/healthz")
+	if err != nil {
+		return err
+	}
+
+	req, err := c.NewRequest("GET", reqURL.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return err
+	}
+
+	return nil
+}
+
 // ListBoards lists all the boards
 func (c *Client) ListBoards() (*[]repository.Board, error) {
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards")

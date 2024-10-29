@@ -2,20 +2,106 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/rhajizada/donezo/internal/auth"
 	"github.com/rhajizada/donezo/internal/repository"
 )
 
 type Handler struct {
-	Repo repository.Queries
+	Repo       repository.Queries
+	Secret     []byte
+	Expiration time.Duration
 }
 
-func New(r *repository.Queries) *Handler {
+func New(r *repository.Queries, secret []byte, expiration time.Duration) *Handler {
 	return &Handler{
-		Repo: *r,
+		Repo:       *r,
+		Secret:     secret,
+		Expiration: expiration,
+	}
+}
+
+// RefreshToken godoc
+// @Summary Refresh token
+// @Description Refreshes a valid, non-expired token
+// @Tags token
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} TokenResponse
+// @Failure 401 {object} string
+// @Failure 500 {object} string
+// @Router /api/token/refresh [get]
+func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authorization header missing", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, auth.BearerPrefix)
+	if tokenString == authHeader {
+		http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse and validate the token
+	token, err := jwt.ParseWithClaims(tokenString, &auth.Claims{}, func(token *jwt.Token) (interface{}, error) {
+		// Ensure the signing method is HMAC and specifically HS256
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, errors.New("unexpected signing method")
+		}
+		return h.Secret, nil
+	})
+	if err != nil {
+		// Check if the error is due to token expiration
+		if ve, ok := err.(*jwt.ValidationError); ok {
+			if ve.Errors&jwt.ValidationErrorExpired != 0 {
+				http.Error(w, "Token has expired", http.StatusUnauthorized)
+				return
+			}
+			if ve.Errors&jwt.ValidationErrorNotValidYet != 0 {
+				http.Error(w, "Token not valid yet", http.StatusUnauthorized)
+				return
+			}
+		}
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(*auth.Claims)
+	if !ok || claims.Issuer != auth.Issuer || !token.Valid {
+		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+		return
+	}
+
+	// Explicitly check token expiration
+	if claims.ExpiresAt == nil || time.Until(claims.ExpiresAt.Time) <= 0 {
+		http.Error(w, "Token has expired", http.StatusUnauthorized)
+		return
+	}
+
+	// Generate a new token
+	newToken, err := auth.GenerateToken(h.Secret, h.Expiration)
+	if err != nil {
+		http.Error(w, "Could not generate token", http.StatusInternalServerError)
+		return
+	}
+
+	// Return the new token in the response
+	body := TokenResponse{
+		Token: newToken,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(body); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -73,6 +159,7 @@ func (h *Handler) CreateBoard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -110,6 +197,7 @@ func (h *Handler) GetBoardByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusNotFound)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -154,6 +242,7 @@ func (h *Handler) UpdateBoardByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusNotFound)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -232,6 +321,7 @@ func (h *Handler) ListItemsByBoardID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusNotFound)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -285,6 +375,7 @@ func (h *Handler) AddItemToBoardByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusNotFound)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -357,6 +448,7 @@ func (h *Handler) UpdateItemById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusNotFound)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

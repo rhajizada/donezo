@@ -34,7 +34,7 @@ func main() {
 	// Load configuration
 	cfg, err := config.LoadClientConfig(*configPath)
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		log.Panicf("Error loading config: %v", err)
 	}
 
 	// Initialize the faker with a seed for reproducibility (optional)
@@ -44,6 +44,10 @@ func main() {
 		cfg.ApiToken,
 		cfg.Duration,
 	)
+
+	if err := cli.Healthy(); err != nil {
+		log.Panicf("Cannot connect to %s: %v", cli.BaseURL, err)
+	}
 
 	p := tea.NewProgram(ui.NewModel(cli), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
@@ -8,9 +10,14 @@ import (
 
 // ServerConfig holds the overall configuration.
 type ServerConfig struct {
-	Port      int    `koanf:"port"`
-	Database  string `koanf:"database"`
-	JWTSecret []byte `koanf:"jwtSecret"`
+	Port     int       `koanf:"port"`
+	Database string    `koanf:"database"`
+	JWT      JWTConfig `koanf:"jwt"`
+}
+
+type JWTConfig struct {
+	Secret   []byte        `koanf:"secret"`
+	Duration time.Duration `koanf:"duration"`
 }
 
 // LoadServerConfig loads the configuration from the specified file path.

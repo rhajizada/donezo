@@ -314,8 +314,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.tempName = m.textInput.Value()
 					m.enteringName = false
 					m.enteringDesc = true
-					m.textInput.Placeholder = "Enter item description"
-					m.textInput.SetValue("")
+					index := m.List.Index()
+					item := m.List.Items()[index].(Item)
+					m.textInput.Placeholder = item.Item.Description
+					m.textInput.SetValue(item.Item.Description)
 					m.textInput.Focus()
 				} else if m.enteringDesc {
 					m.tempDesc = m.textInput.Value()
@@ -403,8 +405,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.renaming = true
 			m.enteringName = true
-			m.textInput.Placeholder = "Enter new item name"
-			m.textInput.SetValue("")
+			index := m.List.Index()
+			item := m.List.Items()[index].(Item)
+
+			m.textInput.Placeholder = item.Item.Title
+			m.textInput.SetValue(item.Item.Title)
 			m.textInput.Focus()
 			return m, nil
 

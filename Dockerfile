@@ -21,7 +21,9 @@ RUN mkdir -p /etc/donezo && \
   mkdir -p /data && \
   echo "Port: 8000" > /etc/donezo/config.yaml && \
   echo "Database: /data/db.sqlite" >> /etc/donezo/config.yaml && \
-  echo "JWTSecret: $(openssl rand -base64 32)" >> /etc/donezo/config.yaml && \
+  echo "JWT:" >> /etc/donezo/config.yaml && \
+  echo "  Secret: $(openssl rand -base64 32)" >> /etc/donezo/config.yaml && \
+  echo "  Duration: 24h" >> /etc/donezo/config.yaml && \
   chown -R donezo:donezo /etc/donezo && \
   chown -R donezo:donezo /data && \
   chown -R donezo:donezo /home/donezo/app/

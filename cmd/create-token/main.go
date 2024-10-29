@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
-	token, err := auth.GenerateJWT(cfg.JWTSecret, "donezo", *expiration)
+	token, err := auth.GenerateToken(cfg.JWT.Secret, *expiration)
 	if err != nil {
 		log.Fatalf("Failed to generate JWT token: %v", err)
 	}

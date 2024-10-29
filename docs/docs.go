@@ -574,6 +574,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/token/refresh": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Refreshes a valid, non-expired token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "token"
+                ],
+                "summary": "Refresh token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.TokenResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/healthz": {
             "get": {
                 "description": "Get service health status",
@@ -625,6 +662,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
                     "type": "string"
                 }
             }

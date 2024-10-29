@@ -13,3 +13,7 @@ type UpdateItemRequest struct {
 	CreateItemRequest
 	Completed bool `json:"completed"`
 }
+
+type TokenResponse struct {
+	Token string `json:"token"`
+}

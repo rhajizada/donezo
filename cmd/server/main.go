@@ -66,13 +66,15 @@ func main() {
 	rq := repository.New(db)
 
 	// Create handler
-	h := handler.New(rq)
+	h := handler.New(rq, cfg.JWT.Secret, cfg.JWT.Duration)
 
 	// Register API routes
 	r := http.NewServeMux()
-	ar := router.RegisterApiRoutes(h)
-	am := middleware.AuthMiddleware(cfg.JWTSecret)
-	r.Handle("/api/", http.StripPrefix("/api", am(ar)))
+	authMiddleware := middleware.AuthMiddleware(cfg.JWT.Secret)
+	boards := authMiddleware(router.RegisterBoardRoutes(h))
+	token := router.RegisterTokenRoutes(h)
+	r.Handle("/api/boards/", http.StripPrefix("/api", boards))
+	r.Handle("/api/token/", http.StripPrefix("/api", token))
 	r.Handle("/swagger/", httpSwagger.WrapHandler)
 	r.HandleFunc("/healthz/", handler.Healthz)
 	lm := middleware.Logging(r)
@@ -81,6 +83,6 @@ func main() {
 	log.Printf("Server is running on port %v\n", cfg.Port)
 	addr := fmt.Sprintf(":%v", cfg.Port)
 	if err := http.ListenAndServe(addr, lm); err != nil {
-		log.Fatalf("Could not start server: %s\n", err.Error())
+		log.Panicf("Could not start server: %s\n", err.Error())
 	}
 }
