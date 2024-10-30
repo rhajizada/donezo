@@ -85,7 +85,7 @@ func (c *Client) Healthy() error {
 
 // ValidateToken checks if current client token is valid
 func (c *Client) ValidateToken() error {
-	reqURL, err := url.Parse(c.BaseURL + "/token/validate")
+	reqURL, err := url.Parse(c.BaseURL + "/api/token/validate")
 	if err != nil {
 		return err
 	}

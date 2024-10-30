@@ -45,6 +45,11 @@ func main() {
 		time.Second*15,
 	)
 
+	err = c.ValidateToken()
+	if err != nil {
+		log.Panicf("Token is invalid %v", err)
+	}
+
 	for i := 1; i < 10; i++ {
 		// Generate a random sentence for the board name
 		name := gofakeit.Sentence(3) // Generates a sentence with approximately 3 words
