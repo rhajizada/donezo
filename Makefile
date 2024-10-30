@@ -41,7 +41,7 @@ generate-config:
 	echo "Port: 8000" > $(CONFIG_FILE) && \
 	echo "Database: /data/db.sqlite" >> $(CONFIG_FILE) && \
 	echo "JWT:" >> $(CONFIG_FILE) && \
-	echo "  Secret: $$(head -c 32 /dev/urandom | base64)" >> $(CONFIG_FILE) && \
+	echo "  Secret: \"$$(head -c 32 /dev/urandom | base64)\"" >> $(CONFIG_FILE) && \
 	echo "  Expiration: 24h" >> $(CONFIG_FILE) && \
 	echo "Configuration file created at $(CONFIG_FILE)"
 

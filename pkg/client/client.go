@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/rhajizada/donezo/internal/handler"
-	"github.com/rhajizada/donezo/internal/repository"
 )
 
 type Client struct {
@@ -30,6 +29,17 @@ func New(baseURL, apiKey string, timeout time.Duration) *Client {
 		},
 		APIKey: apiKey,
 	}
+}
+
+func createError(r *http.Response) error {
+	bodyBytes, readErr := io.ReadAll(r.Body)
+	if readErr != nil {
+		return fmt.Errorf("request to %s failed with status %s and error reading body: %w", r.Status, readErr)
+	}
+	// Convert body bytes to string
+	bodyString := string(bodyBytes)
+	// Return a new error with the status and body message
+	return fmt.Errorf("request failed with status %s: %s", r.Status, bodyString)
 }
 
 // NewRequest returns a new request with prepared authorization headers
@@ -67,14 +77,39 @@ func (c *Client) Healthy() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		return createError(resp)
+	}
+
+	return nil
+}
+
+// ValidateToken checks if current client token is valid
+func (c *Client) ValidateToken() error {
+	reqURL, err := url.Parse(c.BaseURL + "/token/validate")
+	if err != nil {
 		return err
+	}
+
+	req, err := c.NewRequest("GET", reqURL.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return createError(resp)
 	}
 
 	return nil
 }
 
 // ListBoards lists all the boards
-func (c *Client) ListBoards() (*[]repository.Board, error) {
+func (c *Client) ListBoards() (*[]Board, error) {
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards")
 	if err != nil {
 		return nil, err
@@ -92,10 +127,10 @@ func (c *Client) ListBoards() (*[]repository.Board, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return nil, createError(resp)
 	}
 
-	var boards []repository.Board
+	var boards []Board
 	err = json.NewDecoder(resp.Body).Decode(&boards)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding JSON: %v", err)
@@ -104,8 +139,8 @@ func (c *Client) ListBoards() (*[]repository.Board, error) {
 }
 
 // CreateBoard creates a new board with the given name
-func (c *Client) CreateBoard(boardName string) (*repository.Board, error) {
-	reqURL, err := url.Parse(c.BaseURL + "/api/boards")
+func (c *Client) CreateBoard(boardName string) (*Board, error) {
+	reqURL, err := url.Parse(c.BaseURL + "/api/boards/")
 	if err != nil {
 		return nil, err
 	}
@@ -131,10 +166,10 @@ func (c *Client) CreateBoard(boardName string) (*repository.Board, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return nil, createError(resp)
 	}
 
-	var board repository.Board
+	var board Board
 	err = json.NewDecoder(resp.Body).Decode(&board)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding JSON: %v", err)
@@ -144,7 +179,7 @@ func (c *Client) CreateBoard(boardName string) (*repository.Board, error) {
 }
 
 // UpdateBoard updates specified board
-func (c *Client) UpdateBoard(board *repository.Board) (*repository.Board, error) {
+func (c *Client) UpdateBoard(board *Board) (*Board, error) {
 	boardID := strconv.Itoa(int(board.ID))
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards/" + boardID)
 	if err != nil {
@@ -172,10 +207,10 @@ func (c *Client) UpdateBoard(board *repository.Board) (*repository.Board, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return nil, createError(resp)
 	}
 
-	var updatedBoard repository.Board
+	var updatedBoard Board
 	err = json.NewDecoder(resp.Body).Decode(&updatedBoard)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding JSON: %v", err)
@@ -185,7 +220,7 @@ func (c *Client) UpdateBoard(board *repository.Board) (*repository.Board, error)
 }
 
 // DeleteBoard deletes specidied board
-func (c *Client) DeleteBoard(board *repository.Board) error {
+func (c *Client) DeleteBoard(board *Board) error {
 	boardID := strconv.Itoa(int(board.ID))
 
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards/" + boardID)
@@ -205,14 +240,14 @@ func (c *Client) DeleteBoard(board *repository.Board) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return createError(resp)
 	}
 
 	return nil
 }
 
 // ListItems lists all items in the specified board
-func (c *Client) ListItems(board *repository.Board) (*[]repository.Item, error) {
+func (c *Client) ListItems(board *Board) (*[]Item, error) {
 	boardID := strconv.Itoa(int(board.ID))
 
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards/" + boardID + "/items")
@@ -232,10 +267,10 @@ func (c *Client) ListItems(board *repository.Board) (*[]repository.Item, error) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return nil, createError(resp)
 	}
 
-	var items []repository.Item
+	var items []Item
 	err = json.NewDecoder(resp.Body).Decode(&items)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding JSON: %v", err)
@@ -244,7 +279,7 @@ func (c *Client) ListItems(board *repository.Board) (*[]repository.Item, error) 
 }
 
 // AddItem creates a new item in the specified board
-func (c *Client) AddItem(board *repository.Board, title string, description string) (*repository.Item, error) {
+func (c *Client) AddItem(board *Board, title string, description string) (*Item, error) {
 	boardID := strconv.Itoa(int(board.ID))
 
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards/" + boardID + "/items")
@@ -274,10 +309,10 @@ func (c *Client) AddItem(board *repository.Board, title string, description stri
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return nil, createError(resp)
 	}
 
-	var item repository.Item
+	var item Item
 	err = json.NewDecoder(resp.Body).Decode(&item)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding JSON: %v", err)
@@ -287,7 +322,7 @@ func (c *Client) AddItem(board *repository.Board, title string, description stri
 }
 
 // UpdateItem updates specified item
-func (c *Client) UpdateItem(item *repository.Item) (*repository.Item, error) {
+func (c *Client) UpdateItem(item *Item) (*Item, error) {
 	boardID := strconv.Itoa(int(item.BoardID))
 	itemID := strconv.Itoa(int(item.ID))
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards/" + boardID + "/items/" + itemID)
@@ -320,10 +355,10 @@ func (c *Client) UpdateItem(item *repository.Item) (*repository.Item, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return nil, createError(resp)
 	}
 
-	var updatedItem repository.Item
+	var updatedItem Item
 	err = json.NewDecoder(resp.Body).Decode(&updatedItem)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding JSON: %v", err)
@@ -333,7 +368,7 @@ func (c *Client) UpdateItem(item *repository.Item) (*repository.Item, error) {
 }
 
 // DeleteItem deletes specified item
-func (c *Client) DeleteItem(item *repository.Item) error {
+func (c *Client) DeleteItem(item *Item) error {
 	boardID := strconv.Itoa(int(item.BoardID))
 	itemID := strconv.Itoa(int(item.ID))
 
@@ -354,7 +389,7 @@ func (c *Client) DeleteItem(item *repository.Item) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed with status code: %d", resp.StatusCode)
+		return createError(resp)
 	}
 
 	return nil

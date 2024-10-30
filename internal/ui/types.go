@@ -1,12 +1,12 @@
 package ui
 
 import (
-	"github.com/rhajizada/donezo/internal/repository"
+	"github.com/rhajizada/donezo/pkg/client"
 )
 
 // Item wraps repository.Item and implements list.Item interface
 type Item struct {
-	repository.Item
+	client.Item
 }
 
 // Title returns the title of the item, applying style if completed.

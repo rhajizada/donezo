@@ -12,8 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/rhajizada/donezo/client"
-	"github.com/rhajizada/donezo/internal/repository"
+	"github.com/rhajizada/donezo/pkg/client"
 )
 
 var (
@@ -189,7 +188,7 @@ type errMsg struct {
 type boardsLoadedMsg struct{}
 
 type itemsLoadedMsg struct {
-	items []repository.Item
+	items []client.Item
 }
 
 type updateItemMsg struct {
@@ -197,14 +196,14 @@ type updateItemMsg struct {
 }
 
 type addItemMsg struct {
-	item repository.Item
+	item client.Item
 	err  error
 }
 
 // Model defines the UI model.
 type Model struct {
 	Client       *client.Client
-	Boards       []repository.Board
+	Boards       []client.Board
 	CurrentBoard int
 	List         list.Model
 	Keys         *listKeyMap
@@ -288,7 +287,7 @@ func (m *Model) fetchItems() tea.Cmd {
 }
 
 // convertToListItems converts repository items to list.Items
-func convertToListItems(items []repository.Item) []list.Item {
+func convertToListItems(items []client.Item) []list.Item {
 	l := make([]list.Item, len(items))
 	for i, item := range items {
 		l[i] = Item{Item: item}
@@ -316,8 +315,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.enteringDesc = true
 					index := m.List.Index()
 					item := m.List.Items()[index].(Item)
-					m.textInput.Placeholder = item.Item.Description
-					m.textInput.SetValue(item.Item.Description)
+
+					var placeholder string
+					var initialValue string
+					if m.renaming {
+						placeholder = item.Item.Description
+						initialValue = item.Item.Description
+					} else {
+						placeholder = "Enter item description"
+						initialValue = ""
+					}
+					m.textInput.Placeholder = placeholder
+					m.textInput.SetValue(initialValue)
 					m.textInput.Focus()
 				} else if m.enteringDesc {
 					m.tempDesc = m.textInput.Value()
@@ -507,7 +516,7 @@ func (m *Model) View() string {
 }
 
 // Implement updateItem command
-func (m *Model) updateItem(item *repository.Item, newName, newDesc string) tea.Cmd {
+func (m *Model) updateItem(item *client.Item, newName, newDesc string) tea.Cmd {
 	return func() tea.Msg {
 		item.Title = newName
 		item.Description = newDesc
@@ -517,7 +526,7 @@ func (m *Model) updateItem(item *repository.Item, newName, newDesc string) tea.C
 }
 
 // Implement addItem command
-func (m *Model) addItem(board *repository.Board, name, desc string) tea.Cmd {
+func (m *Model) addItem(board *client.Board, name, desc string) tea.Cmd {
 	return func() tea.Msg {
 		newItem, err := m.Client.AddItem(board, name, desc)
 		if err != nil {

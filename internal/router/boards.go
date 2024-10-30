@@ -10,8 +10,8 @@ import (
 func RegisterBoardRoutes(h *handler.Handler) *http.ServeMux {
 	router := http.NewServeMux()
 	router.HandleFunc("GET /boards/", h.ListBoards)
-	router.HandleFunc("GET /boards/{boardId}", h.GetBoardByID)
 	router.HandleFunc("POST /boards/", h.CreateBoard)
+	router.HandleFunc("GET /boards/{boardId}", h.GetBoardByID)
 	router.HandleFunc("DELETE /boards/{boardId}", h.DeleteBoardByID)
 	router.HandleFunc("PUT /boards/{boardId}", h.UpdateBoardByID)
 	router.HandleFunc("GET /boards/{boardId}/items", h.ListItemsByBoardID)
