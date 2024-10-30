@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rhajizada/donezo/client"
@@ -42,7 +43,7 @@ func main() {
 	cli := client.New(
 		cfg.BaseURL,
 		cfg.ApiToken,
-		cfg.Duration,
+		time.Second*5,
 	)
 
 	if err := cli.Healthy(); err != nil {

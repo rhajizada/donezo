@@ -34,3 +34,6 @@ go.work
 
 # Configuration
 config.yaml
+
+# Builds
+bin/

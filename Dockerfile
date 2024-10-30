@@ -17,17 +17,9 @@ WORKDIR /home/donezo/app
 COPY --from=builder /app/data/sql/migrations ./data/sql/migrations
 COPY --from=builder /app/create-token .
 COPY --from=builder /app/server .
-RUN mkdir -p /etc/donezo && \
-  mkdir -p /data && \
-  echo "Port: 8000" > /etc/donezo/config.yaml && \
-  echo "Database: /data/db.sqlite" >> /etc/donezo/config.yaml && \
-  echo "JWT:" >> /etc/donezo/config.yaml && \
-  echo "  Secret: $(openssl rand -base64 32)" >> /etc/donezo/config.yaml && \
-  echo "  Duration: 24h" >> /etc/donezo/config.yaml && \
-  chown -R donezo:donezo /etc/donezo && \
+RUN mkdir -p /data && \
   chown -R donezo:donezo /data && \
   chown -R donezo:donezo /home/donezo/app/
 ENV PATH="/home/donezo/app/:${PATH}"
 USER donezo
-EXPOSE 8000
 ENTRYPOINT [ "server" ]

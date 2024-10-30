@@ -16,8 +16,8 @@ type ServerConfig struct {
 }
 
 type JWTConfig struct {
-	Secret   []byte        `koanf:"secret"`
-	Duration time.Duration `koanf:"duration"`
+	Secret     []byte        `koanf:"secret"`
+	Expiration time.Duration `koanf:"expiration"`
 }
 
 // LoadServerConfig loads the configuration from the specified file path.

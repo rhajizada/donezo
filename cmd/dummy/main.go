@@ -42,7 +42,7 @@ func main() {
 	c := client.New(
 		cfg.BaseURL,
 		cfg.ApiToken,
-		cfg.Duration,
+		time.Second*15,
 	)
 
 	for i := 1; i < 10; i++ {

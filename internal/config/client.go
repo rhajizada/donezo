@@ -1,8 +1,6 @@
 package config
 
 import (
-	"time"
-
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
@@ -10,9 +8,8 @@ import (
 
 // ClientConfig holds the overall configuration.
 type ClientConfig struct {
-	BaseURL  string        `koanf:"baseURL"`
-	ApiToken string        `koanf:"apiToken"`
-	Duration time.Duration `koanf:"duration"`
+	BaseURL  string `koanf:"baseURL"`
+	ApiToken string `koanf:"apiToken"`
 }
 
 // LoadClientConfig loads the configuration from the specified file path.

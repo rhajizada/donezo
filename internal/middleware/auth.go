@@ -26,7 +26,6 @@ func AuthMiddleware(secret []byte) func(next http.Handler) http.Handler {
 			// Validate the token
 			err := auth.ValidateToken(secret, tokenString)
 			if err != nil {
-
 				http.Error(w, "invalid or expired token", http.StatusUnauthorized)
 				return
 			}

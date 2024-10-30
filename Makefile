@@ -3,11 +3,24 @@ IMAGE_NAME=donezo
 CONTAINER_NAME=donezo
 
 
+define prepreqs
+	@if ! command -v yq >/dev/null 2>&1; then \
+		echo "Error: yq is not installed. Please install yq and try again." >&2; \
+		exit 1; \
+	fi; \
+	if [ ! -f "$(CONFIG_FILE)" ]; then \
+		echo "Error: CONFIG_FILE \"$(CONFIG_FILE)\" does not exist. Please provide a valid file path." >&2; \
+		exit 1; \
+	fi;
+endef
+
+
 .PHONY: build
 ## build: Compile the packages
 build:
-	@go build -o server ./cmd/server
-	@go build -o create-token ./cmd/create-token
+	@go build -o bin/server ./cmd/server
+	@go build -o bin/create-token ./cmd/create-token
+	@go build -o bin/cli ./cmd/cli/
 
 
 .PHONY: swagger
@@ -21,17 +34,28 @@ swagger:
 sqlc:
 	@sqlc generate
 
+
+.PHONY: generate-config
+## generate-config: Generates a compatible config.yaml
+generate-config:
+	echo "Port: 8000" > $(CONFIG_FILE) && \
+	echo "Database: /data/db.sqlite" >> $(CONFIG_FILE) && \
+	echo "JWT:" >> $(CONFIG_FILE) && \
+	echo "  Secret: $$(head -c 32 /dev/urandom | base64)" >> $(CONFIG_FILE) && \
+	echo "  Expiration: 24h" >> $(CONFIG_FILE) && \
+	echo "Configuration file created at $(CONFIG_FILE)"
+
+
 .PHONY: run
 ## run: Build and run in development mode
-run: build
-	@./server $(ARGS)
+run: pre
+	@go run cmd/server/main.go -config "$(CONFIG_FILE)"
 
 
 .PHONY: clean
 ## clean: Clean project and previous builds
 clean:
-	@rm -f server
-	@rm -f create-token
+	@rm builds/*
 
 
 .PHONY: deps
@@ -47,6 +71,7 @@ deps:
 build-image:
 	@docker build . -t $(IMAGE_NAME):latest
 
+
 .PHONY: create-volume
 ## create-volume: Create docker volume
 create-volume:
@@ -57,19 +82,37 @@ create-volume:
 		docker volume create $(VOLUME_NAME); \
 	fi
 
+
 .PHONY: run-container
 ## run-container: Launch a docker container
-run-container: build-image create-volume
-	@docker run -d \
+run-container: pre build-image create-volume
+	@PORT=$$(yq '.Port' $(CONFIG_FILE)); \
+	docker run -d \
 		--name $(CONTAINER_NAME) \
 		-v $(VOLUME_NAME):/data \
-		-p 8000:8000 \
+		-v $(CONFIG_FILE):/etc/donezo/config.yaml \
+		-p $$PORT:$$PORT \
 		$(IMAGE_NAME)
+
+
+.PHONY: rm-container
+## rm-container: Stops and deletes container
+rm-container:
+	@docker stop $(CONTAINER_NAME)
+	@docker rm $(CONTAINER_NAME)
+
 
 .PHONY: create-token
 ## create-token: Create authentication token
-create-token:
-	docker exec -it $(CONTAINER_NAME) create-token $(ARGS)
+create-token: pre
+	@go run ./cmd/create-token/main.go -config $(CONFIG_FILE) $(ARGS)
+
+
+.PHONY: create-token-container
+## create-token-container: Create authentication token in running docker container
+create-token-container:
+	@docker exec -it $(CONTAINER_NAME) create-token $(ARGS)
+
 
 .PHONY: shell
 ## shell: Launch shell inside docker container
@@ -90,3 +133,6 @@ help: Makefile
 	@echo
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 	@echo
+
+pre:
+	$(prereqs)

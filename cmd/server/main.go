@@ -66,7 +66,7 @@ func main() {
 	rq := repository.New(db)
 
 	// Create handler
-	h := handler.New(rq, cfg.JWT.Secret, cfg.JWT.Duration)
+	h := handler.New(rq, cfg.JWT.Secret, cfg.JWT.Expiration)
 
 	// Register API routes
 	r := http.NewServeMux()
