@@ -21,14 +21,14 @@ type JWTConfig struct {
 }
 
 // LoadServerConfig loads the configuration from the specified file path.
-func LoadServerConfig(path string) (ServerConfig, error) {
+func LoadServerConfig(path string) (*ServerConfig, error) {
 	var cfg ServerConfig
 	k := koanf.New(".")
 	if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {
-		return cfg, err
+		return nil, err
 	}
 	if err := k.Unmarshal("", &cfg); err != nil {
-		return cfg, err
+		return nil, err
 	}
-	return cfg, nil
+	return &cfg, nil
 }

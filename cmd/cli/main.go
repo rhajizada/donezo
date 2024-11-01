@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,20 +14,10 @@ import (
 )
 
 func main() {
-	var defaultConfigPath string
-
-	// Check if XDG_CONFIG_HOME is set
-	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
-		defaultConfigPath = filepath.Join(xdgConfigHome, "donezo", "config.yaml")
-	} else {
-		// Fallback to ~/.config
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatalf("Unable to determine user home directory: %v", err)
-		}
-		defaultConfigPath = filepath.Join(homeDir, ".config", "donezo", "config.yaml")
+	defaultConfigPath, err := config.GetDefaultConfigPath()
+	if err != nil {
+		log.Panic(err)
 	}
-
 	// Define the config flag with the determined default path
 	configPath := flag.String("config", defaultConfigPath, "Path to configuration file")
 	flag.Parse()

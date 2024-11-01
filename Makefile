@@ -1,6 +1,7 @@
 VOLUME_NAME=donezo-data
 IMAGE_NAME=donezo
 CONTAINER_NAME=donezo
+SHELL_CONTAINER_NAME=donezo-debug
 
 
 define prepreqs
@@ -38,11 +39,11 @@ sqlc:
 .PHONY: generate-config
 ## generate-config: Generates a compatible config.yaml
 generate-config:
-	echo "Port: 8000" > $(CONFIG_FILE) && \
-	echo "Database: /data/db.sqlite" >> $(CONFIG_FILE) && \
-	echo "JWT:" >> $(CONFIG_FILE) && \
-	echo "  Secret: \"$$(head -c 32 /dev/urandom | base64)\"" >> $(CONFIG_FILE) && \
-	echo "  Expiration: 24h" >> $(CONFIG_FILE) && \
+	echo "port: 8000" > $(CONFIG_FILE) && \
+	echo "database: /data/db.sqlite" >> $(CONFIG_FILE) && \
+	echo "jwt:" >> $(CONFIG_FILE) && \
+	echo "  secret: $$(head -c 32 /dev/urandom | base64)" >> $(CONFIG_FILE) && \
+	echo "  expiration: 24h" >> $(CONFIG_FILE) && \
 	echo "Configuration file created at $(CONFIG_FILE)"
 
 
@@ -86,11 +87,11 @@ create-volume:
 .PHONY: run-container
 ## run-container: Launch a docker container
 run-container: pre build-image create-volume
-	@PORT=$$(yq '.Port' $(CONFIG_FILE)); \
+	@PORT=$$(yq '.port' $(CONFIG_FILE)); \
 	docker run -d \
 		--name $(CONTAINER_NAME) \
 		-v $(VOLUME_NAME):/data \
-		-v $(CONFIG_FILE):/etc/donezo/config.yaml \
+		--mount type=bind,source=$(CONFIG_FILE),target=/etc/donezo/config.yaml \
 		-p $$PORT:$$PORT \
 		$(IMAGE_NAME)
 
@@ -107,6 +108,11 @@ rm-container:
 create-token: pre
 	@go run ./cmd/create-token/main.go -config $(CONFIG_FILE) $(ARGS)
 
+.PHONY: cli
+## cli: Launch CLI
+cli:
+	@go run ./cmd/cli/main.go $(ARGS)
+
 
 .PHONY: create-token-container
 ## create-token-container: Create authentication token in running docker container
@@ -118,8 +124,9 @@ create-token-container:
 ## shell: Launch shell inside docker container
 shell: build-image create-volume
 	@docker run --rm -it \
-		--name $(CONTAINER_NAME) \
-		-v $(VOLUME_NAME):/path/in/container \
+		--name $(SHELL_CONTAINER_NAME) \
+		-v $(VOLUME_NAME):/data \
+		--mount type=bind,source=$(CONFIG_FILE),target=/etc/donezo/config.yaml \
 		-p 8000:8000 \
 		$(IMAGE_NAME) /bin/sh
 

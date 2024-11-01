@@ -313,12 +313,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.tempName = m.textInput.Value()
 					m.enteringName = false
 					m.enteringDesc = true
-					index := m.List.Index()
-					item := m.List.Items()[index].(Item)
 
 					var placeholder string
 					var initialValue string
 					if m.renaming {
+						index := m.List.Index()
+						item := m.List.Items()[index].(Item)
 						placeholder = item.Item.Description
 						initialValue = item.Item.Description
 					} else {

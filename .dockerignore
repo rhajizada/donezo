@@ -1,0 +1,9 @@
+*.md
+.git/
+.gitignore
+.vscode/
+bin/
+config.yaml
+db.sqlite
+Makefile
+

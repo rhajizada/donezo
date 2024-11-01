@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -13,37 +11,30 @@ import (
 )
 
 func main() {
-	var defaultConfigPath string
-
-	// Check if XDG_CONFIG_HOME is set
-	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
-		defaultConfigPath = filepath.Join(xdgConfigHome, "donezo", "config.yaml")
-	} else {
-		// Fallback to ~/.config
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatalf("Unable to determine user home directory: %v", err)
-		}
-		defaultConfigPath = filepath.Join(homeDir, ".config", "donezo", "config.yaml")
+	defaultConfigPath, err := config.GetDefaultConfigPath()
+	if err != nil {
+		log.Panic(err)
 	}
-
 	// Define the config flag with the determined default path
 	configPath := flag.String("config", defaultConfigPath, "Path to configuration file")
 	flag.Parse()
 	// Load configuration
 	cfg, err := config.LoadClientConfig(*configPath)
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		log.Panicf("Error loading config: %v", err)
 	}
 
 	// Initialize the faker with a seed for reproducibility (optional)
-	gofakeit.Seed(time.Now().UnixNano())
 
 	c := client.New(
 		cfg.BaseURL,
 		cfg.ApiToken,
-		time.Second*15,
+		time.Second*5,
 	)
+
+	if err := c.Healthy(); err != nil {
+		log.Panicf("Cannot connect to %s: %v", c.BaseURL, err)
+	}
 
 	err = c.ValidateToken()
 	if err != nil {

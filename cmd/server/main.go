@@ -36,30 +36,30 @@ func main() {
 	// Load configuration
 	cfg, err := config.LoadServerConfig(*configPath)
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		log.Panicf("Error loading config: %v", err)
 	}
 
 	// Load database
 	db, err := sql.Open("sqlite3", cfg.Database)
 	if err != nil {
-		log.Fatalf("Failed to open database %s: %v", cfg.Database, err)
+		log.Panicf("Failed to open database %s: %v", cfg.Database, err)
 	}
 	defer db.Close()
 
 	// Ensure the migrations directory exists
 	migrationsDir := "data/sql/migrations"
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
-		log.Fatalf("Migrations directory does not exist: %s", migrationsDir)
+		log.Panicf("Migrations directory does not exist: %s", migrationsDir)
 	}
 
 	// Set Goose dialect to SQLite
 	if err := goose.SetDialect("sqlite3"); err != nil {
-		log.Fatalf("Failed to set Goose dialect: %v", err)
+		log.Panicf("Failed to set Goose dialect: %v", err)
 	}
 
 	// Apply all up migrations
 	if err := goose.Up(db, migrationsDir); err != nil {
-		log.Fatalf("Failed to apply migrations: %v", err)
+		log.Panicf("Failed to apply migrations: %v", err)
 	}
 
 	// Create repository
