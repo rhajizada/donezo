@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/rhajizada/donezo/internal/handler"
 	"github.com/rhajizada/donezo/internal/repository"
 )
 
@@ -10,4 +11,8 @@ type Board struct {
 
 type Item struct {
 	repository.Item
+}
+
+type Token struct {
+	handler.TokenResponse
 }

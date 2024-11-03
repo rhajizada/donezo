@@ -38,7 +38,7 @@ func main() {
 
 	err = c.ValidateToken()
 	if err != nil {
-		log.Panicf("Token is invalid %v", err)
+		log.Panic(err)
 	}
 
 	for i := 1; i < 10; i++ {
@@ -53,7 +53,7 @@ func main() {
 			// Generate random sentences for item title and description
 			title := gofakeit.Sentence(2)       // Approximately 2 words
 			description := gofakeit.Sentence(6) // Approximately 6 words
-			_, err := c.AddItem(board, title, description)
+			_, err := c.CreateItem(board, title, description)
 			if err != nil {
 				log.Fatalf("Failed to create an item: %v", err)
 			}

@@ -108,6 +108,38 @@ func (c *Client) ValidateToken() error {
 	return nil
 }
 
+func (c *Client) RefreshToken() error {
+	reqURL, err := url.Parse(c.BaseURL + "/api/token/refresh")
+	if err != nil {
+		return err
+	}
+
+	req, err := c.NewRequest("GET", reqURL.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return createError(resp)
+	}
+
+	var body Token
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	if err != nil {
+		return fmt.Errorf("error decoding JSON: %v", err)
+	}
+
+	c.APIKey = body.Token
+
+	return nil
+}
+
 // ListBoards lists all the boards
 func (c *Client) ListBoards() (*[]Board, error) {
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards")
@@ -278,8 +310,8 @@ func (c *Client) ListItems(board *Board) (*[]Item, error) {
 	return &items, nil
 }
 
-// AddItem creates a new item in the specified board
-func (c *Client) AddItem(board *Board, title string, description string) (*Item, error) {
+// CreateItem creates a new item in the specified board
+func (c *Client) CreateItem(board *Board, title string, description string) (*Item, error) {
 	boardID := strconv.Itoa(int(board.ID))
 
 	reqURL, err := url.Parse(c.BaseURL + "/api/boards/" + boardID + "/items")

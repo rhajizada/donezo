@@ -2,9 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -29,19 +27,23 @@ func main() {
 
 	// Initialize the faker with a seed for reproducibility (optional)
 
-	cli := client.New(
+	c := client.New(
 		cfg.BaseURL,
 		cfg.ApiToken,
 		time.Second*5,
 	)
 
-	if err := cli.Healthy(); err != nil {
-		log.Panicf("Cannot connect to %s: %v", cli.BaseURL, err)
+	if err := c.Healthy(); err != nil {
+		log.Panicf("Cannot connect to %s: %v", c.BaseURL, err)
 	}
 
-	p := tea.NewProgram(ui.NewModel(cli), tea.WithAltScreen())
+	err = c.ValidateToken()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	p := tea.NewProgram(ui.NewModel(c), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
+		log.Panic(err)
 	}
 }

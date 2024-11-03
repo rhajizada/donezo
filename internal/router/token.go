@@ -9,7 +9,6 @@ import (
 
 func RegisterTokenRoutes(h *handler.Handler) *http.ServeMux {
 	router := http.NewServeMux()
-	router.HandleFunc("GET /token/refresh", h.RefreshToken)
 	router.HandleFunc("GET /token/validate", h.ValidateToken)
 	return router
 }
