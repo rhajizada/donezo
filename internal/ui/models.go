@@ -34,7 +34,7 @@ func StatusMessageStyle(msg string) string {
 // listKeyMap defines custom key bindings and implements help.KeyMap interface.
 type listKeyMap struct {
 	// Custom key bindings
-	InsertItem       key.Binding
+	AddItem          key.Binding
 	DeleteItem       key.Binding
 	RenameItem       key.Binding
 	RefreshList      key.Binding
@@ -59,7 +59,7 @@ type listKeyMap struct {
 // newListKeyMap initializes a new listKeyMap with custom bindings.
 func newListKeyMap() *listKeyMap {
 	return &listKeyMap{
-		InsertItem: key.NewBinding(
+		AddItem: key.NewBinding(
 			key.WithKeys("a"),
 			key.WithHelp("a", "add item"),
 		),
@@ -122,7 +122,7 @@ func newListKeyMap() *listKeyMap {
 // It's part of the help.KeyMap interface.
 func (k listKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{
-		k.InsertItem,
+		k.AddItem,
 		k.DeleteItem,
 		k.RenameItem,
 		k.RefreshList,
@@ -137,7 +137,7 @@ func (k listKeyMap) ShortHelp() []key.Binding {
 // It's part of the help.KeyMap interface.
 func (k listKeyMap) FullHelp() [][]key.Binding {
 	allKeys := []key.Binding{
-		k.InsertItem,
+		k.AddItem,
 		k.DeleteItem,
 		k.RenameItem,
 		k.RefreshList,
@@ -195,7 +195,7 @@ type updateItemMsg struct {
 	err error
 }
 
-type addItemMsg struct {
+type createItemMsg struct {
 	item client.Item
 	err  error
 }
@@ -344,7 +344,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.adding = false
 						// Proceed to add the item
 						board := m.Boards[m.CurrentBoard]
-						return m, m.addItem(&board, m.tempName, m.tempDesc)
+						return m, m.createItem(&board, m.tempName, m.tempDesc)
 					}
 				}
 			case tea.KeyEsc:
@@ -384,7 +384,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
-	case addItemMsg:
+	case createItemMsg:
 		if msg.err != nil {
 			cmds = append(cmds, m.List.NewStatusMessage(StatusMessageStyle(fmt.Sprintf("Error adding item: %v", msg.err))))
 		} else {
@@ -422,7 +422,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textInput.Focus()
 			return m, nil
 
-		case key.Matches(msg, m.Keys.InsertItem):
+		case key.Matches(msg, m.Keys.AddItem):
 			m.adding = true
 			m.enteringName = true
 			m.textInput.Placeholder = "Enter item name"
@@ -525,14 +525,14 @@ func (m *Model) updateItem(item *client.Item, newName, newDesc string) tea.Cmd {
 	}
 }
 
-// Implement addItem command
-func (m *Model) addItem(board *client.Board, name, desc string) tea.Cmd {
+// Implement createItem command
+func (m *Model) createItem(board *client.Board, name, desc string) tea.Cmd {
 	return func() tea.Msg {
-		newItem, err := m.Client.AddItem(board, name, desc)
+		newItem, err := m.Client.CreateItem(board, name, desc)
 		if err != nil {
-			return addItemMsg{err: err}
+			return createItemMsg{err: err}
 		}
-		return addItemMsg{item: *newItem}
+		return createItemMsg{item: *newItem}
 	}
 }
 
