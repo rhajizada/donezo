@@ -129,43 +129,50 @@ func (k listKeyMap) FullHelp() [][]key.Binding {
 		k.ToggleStatusBar,
 		k.TogglePagination,
 		k.ToggleComplete,
-		k.ToggleHelpMenu, // Only '?' is included
+		k.ToggleHelpMenu,
 		k.Quit,
 	}
 
-	numCols := 5 // Reduced number of columns to accommodate spacing
+	numRows := 3
 	totalKeys := len(allKeys)
-	numRows := int(math.Ceil(float64(totalKeys) / float64(numCols)))
+	numCols := int(math.Ceil(float64(totalKeys) / float64(numRows)))
 
-	columns := make([][]key.Binding, numCols)
-	for i := 0; i < numCols; i++ {
-		columns[i] = make([]key.Binding, 0, numRows)
+	columns := make([][]key.Binding, numRows)
+	for i := 0; i < numRows; i++ {
+		columns[i] = make([]key.Binding, 0, numCols)
 	}
 
 	for i, kb := range allKeys {
-		col := i / numRows
-		if col >= numCols {
-			col = numCols - 1
+		col := i / numCols
+		if col >= numRows {
+			col = numRows - 1
 		}
 		columns[col] = append(columns[col], kb)
 	}
 
 	// Pad columns with empty key bindings to ensure uniform rows
-	for i := 0; i < numCols; i++ {
-		for len(columns[i]) < numRows {
+	for i := 0; i < numRows; i++ {
+		for len(columns[i]) < numCols {
 			columns[i] = append(columns[i], key.Binding{}) // Empty binding
 		}
 	}
 
-	// Add spacing between columns
-	spacedColumns := make([][]key.Binding, numRows)
-	for row := 0; row < numRows; row++ {
-		rowBindings := make([]key.Binding, 0, numCols)
-		for col := 0; col < numCols; col++ {
+	// Add spacing between columns by inserting empty bindings or using lipgloss styles
+	spacedColumns := make([][]key.Binding, numCols)
+	for row := 0; row < numCols; row++ {
+		rowBindings := make([]key.Binding, 0, numRows*2-1) // Extra space between columns
+		for col := 0; col < numRows; col++ {
 			if row < len(columns[col]) {
 				rowBindings = append(rowBindings, columns[col][row])
+				if col < numRows-1 {
+					// Insert an empty binding as spacer for more space between columns
+					rowBindings = append(rowBindings, key.Binding{})
+				}
 			} else {
 				rowBindings = append(rowBindings, key.Binding{})
+				if col < numRows-1 {
+					rowBindings = append(rowBindings, key.Binding{})
+				}
 			}
 		}
 		spacedColumns[row] = rowBindings
@@ -356,7 +363,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, v := appStyle.GetFrameSize()
-		m.List.SetSize(msg.Width-h, msg.Height-v)
+
+		// Define fixed help height
+		helpHeight := 10 // Adjust based on expected help content
+
+		if m.showHelp {
+			m.List.SetSize(msg.Width-h, msg.Height-v-helpHeight)
+		} else {
+			m.List.SetSize(msg.Width-h, msg.Height-v)
+		}
 		m.help.Width = msg.Width / 2 // Adjust help width as needed
 
 	case errMsg:
@@ -503,6 +518,7 @@ func (m *Model) View() string {
 
 	if m.showHelp {
 		helpView := m.help.View(m.Keys)
+		// Add additional spacing between the list view and help view
 		view += "\n\n" + appStyle.Render(helpView)
 	}
 
