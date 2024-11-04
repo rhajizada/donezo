@@ -1,4 +1,3 @@
-// models.go
 package ui
 
 import (
@@ -43,17 +42,9 @@ type listKeyMap struct {
 	ToggleTitleBar   key.Binding
 	ToggleStatusBar  key.Binding
 	TogglePagination key.Binding
-	ToggleComplete   key.Binding // Added this line
-
-	// Help toggle key bindings
-	ToggleHelpMenu    key.Binding
-	ToggleHelpMenuAlt key.Binding
-
-	// Quit key binding
-	Quit key.Binding
-
-	// Choose key binding
-	Choose key.Binding
+	ToggleComplete   key.Binding
+	ToggleHelpMenu   key.Binding
+	Quit             key.Binding
 }
 
 // newListKeyMap initializes a new listKeyMap with custom bindings.
@@ -95,25 +86,18 @@ func newListKeyMap() *listKeyMap {
 			key.WithKeys("P"),
 			key.WithHelp("P", "toggle pagination"),
 		),
-		ToggleComplete: key.NewBinding( // Added this block
+		ToggleComplete: key.NewBinding(
 			key.WithKeys(" "),
 			key.WithHelp("space", "toggle complete"),
 		),
+		// Removed ToggleHelpMenu (H) as per requirement
 		ToggleHelpMenu: key.NewBinding(
-			key.WithKeys("H"),
-			key.WithHelp("H", "toggle help"),
-		),
-		ToggleHelpMenuAlt: key.NewBinding(
 			key.WithKeys("?"),
 			key.WithHelp("?", "toggle help"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "esc"),
 			key.WithHelp("q", "quit"),
-		),
-		Choose: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("enter", "choose item"),
 		),
 	}
 }
@@ -123,12 +107,10 @@ func newListKeyMap() *listKeyMap {
 func (k listKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{
 		k.AddItem,
-		k.DeleteItem,
-		k.RenameItem,
 		k.RefreshList,
-		k.ToggleComplete, // Added this line
+		k.NextBoard,
+		k.ToggleComplete,
 		k.ToggleHelpMenu,
-		k.Choose,
 		k.Quit,
 	}
 }
@@ -146,14 +128,12 @@ func (k listKeyMap) FullHelp() [][]key.Binding {
 		k.ToggleTitleBar,
 		k.ToggleStatusBar,
 		k.TogglePagination,
-		k.ToggleComplete, // Added this line
-		k.ToggleHelpMenu,
-		k.ToggleHelpMenuAlt,
-		k.Choose,
+		k.ToggleComplete,
+		k.ToggleHelpMenu, // Only '?' is included
 		k.Quit,
 	}
 
-	numCols := 3 // Define the number of columns you want
+	numCols := 5 // Reduced number of columns to accommodate spacing
 	totalKeys := len(allKeys)
 	numRows := int(math.Ceil(float64(totalKeys) / float64(numCols)))
 
@@ -177,7 +157,21 @@ func (k listKeyMap) FullHelp() [][]key.Binding {
 		}
 	}
 
-	return columns
+	// Add spacing between columns
+	spacedColumns := make([][]key.Binding, numRows)
+	for row := 0; row < numRows; row++ {
+		rowBindings := make([]key.Binding, 0, numCols)
+		for col := 0; col < numCols; col++ {
+			if row < len(columns[col]) {
+				rowBindings = append(rowBindings, columns[col][row])
+			} else {
+				rowBindings = append(rowBindings, key.Binding{})
+			}
+		}
+		spacedColumns[row] = rowBindings
+	}
+
+	return spacedColumns
 }
 
 // Message types
@@ -394,8 +388,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 
 	case tea.KeyMsg:
-		// Handle help menu toggle with both H and ?
-		if key.Matches(msg, m.Keys.ToggleHelpMenu) || key.Matches(msg, m.Keys.ToggleHelpMenuAlt) {
+		// Handle help menu toggle with only '?'
+		if key.Matches(msg, m.Keys.ToggleHelpMenu) {
 			m.showHelp = !m.showHelp
 			m.help.ShowAll = m.showHelp // Synchronize ShowAll flag
 			return m, nil
@@ -482,7 +476,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Batch(cmds...)
 
-		case key.Matches(msg, m.Keys.ToggleComplete): // Added this case
+		case key.Matches(msg, m.Keys.ToggleComplete):
 			index := m.List.Index()
 			if index >= 0 && index < len(m.List.Items()) {
 				item := m.List.Items()[index].(Item)

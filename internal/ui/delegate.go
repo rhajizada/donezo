@@ -1,4 +1,3 @@
-// delegate.go
 package ui
 
 import (
@@ -6,7 +5,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -124,35 +122,6 @@ func (d *ListDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 // newItemDelegate creates a new CustomDelegate with minimal configuration.
 func newItemDelegate(keys *listKeyMap) list.ItemDelegate {
 	d := NewDelegate()
-
-	// Define UpdateFunc to handle key bindings within the delegate
-	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			if key.Matches(msg, keys.Choose) {
-				// Get the selected item
-				if len(m.Items()) == 0 {
-					return m.NewStatusMessage(StatusMessageStyle("No item selected"))
-				}
-				selectedItem := m.SelectedItem().(Item)
-				return m.NewStatusMessage(StatusMessageStyle("You chose " + selectedItem.Title()))
-			}
-		}
-		return nil
-	}
-
-	// Define short and full help
-	d.ShortHelpFunc = func() []key.Binding {
-		return []key.Binding{
-			keys.Choose,
-		}
-	}
-
-	d.FullHelpFunc = func() [][]key.Binding {
-		return [][]key.Binding{
-			{keys.Choose},
-		}
-	}
 
 	return d
 }
