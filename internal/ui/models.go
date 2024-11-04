@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -32,7 +31,6 @@ func StatusMessageStyle(msg string) string {
 
 // listKeyMap defines custom key bindings and implements help.KeyMap interface.
 type listKeyMap struct {
-	// Custom key bindings
 	AddItem          key.Binding
 	DeleteItem       key.Binding
 	RenameItem       key.Binding
@@ -106,18 +104,14 @@ func newListKeyMap() *listKeyMap {
 func (k listKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{
 		k.AddItem,
-		k.RefreshList,
 		k.NextBoard,
-		k.ToggleComplete,
-		k.ToggleHelpMenu,
-		k.Quit,
 	}
 }
 
 // FullHelp returns keybindings for the expanded help view.
 // It's part of the help.KeyMap interface.
 func (k listKeyMap) FullHelp() [][]key.Binding {
-	allKeys := []key.Binding{
+	return formatKeys([]key.Binding{
 		k.AddItem,
 		k.DeleteItem,
 		k.RenameItem,
@@ -128,56 +122,7 @@ func (k listKeyMap) FullHelp() [][]key.Binding {
 		k.ToggleStatusBar,
 		k.TogglePagination,
 		k.ToggleComplete,
-		k.ToggleHelpMenu,
-		k.Quit,
-	}
-
-	numRows := 3
-	totalKeys := len(allKeys)
-	numCols := int(math.Ceil(float64(totalKeys) / float64(numRows)))
-
-	columns := make([][]key.Binding, numRows)
-	for i := 0; i < numRows; i++ {
-		columns[i] = make([]key.Binding, 0, numCols)
-	}
-
-	for i, kb := range allKeys {
-		col := i / numCols
-		if col >= numRows {
-			col = numRows - 1
-		}
-		columns[col] = append(columns[col], kb)
-	}
-
-	// Pad columns with empty key bindings to ensure uniform rows
-	for i := 0; i < numRows; i++ {
-		for len(columns[i]) < numCols {
-			columns[i] = append(columns[i], key.Binding{}) // Empty binding
-		}
-	}
-
-	// Add spacing between columns by inserting empty bindings or using lipgloss styles
-	spacedColumns := make([][]key.Binding, numCols)
-	for row := 0; row < numCols; row++ {
-		rowBindings := make([]key.Binding, 0, numRows*2-1) // Extra space between columns
-		for col := 0; col < numRows; col++ {
-			if row < len(columns[col]) {
-				rowBindings = append(rowBindings, columns[col][row])
-				if col < numRows-1 {
-					// Insert an empty binding as spacer for more space between columns
-					rowBindings = append(rowBindings, key.Binding{})
-				}
-			} else {
-				rowBindings = append(rowBindings, key.Binding{})
-				if col < numRows-1 {
-					rowBindings = append(rowBindings, key.Binding{})
-				}
-			}
-		}
-		spacedColumns[row] = rowBindings
-	}
-
-	return spacedColumns
+	}, 4)
 }
 
 // Message types
@@ -246,15 +191,11 @@ func NewModel(cli *client.Client) *Model {
 	ti.CharLimit = 256
 	ti.Width = 50
 
-	// Initialize help
-	h := help.New()
-
 	m := &Model{
 		Client:      cli,
 		Keys:        listKeys,
 		List:        l,
 		textInput:   ti,
-		help:        h,
 		showHelp:    false,
 		state:       StateIdle,
 		currentItem: nil,
@@ -361,12 +302,6 @@ func (m *Model) View() string {
 	}
 
 	view := m.List.View()
-
-	if m.showHelp {
-		helpView := m.help.View(m.Keys)
-		// Add additional spacing between the list view and help view
-		view += "\n" + appStyle.Render(helpView)
-	}
 
 	return appStyle.Render(view)
 }
