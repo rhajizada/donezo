@@ -29,127 +29,11 @@ func StatusMessageStyle(msg string) string {
 		Render(msg)
 }
 
-// listKeyMap defines custom key bindings and implements help.KeyMap interface.
-type listKeyMap struct {
-	AddItem          key.Binding
-	DeleteItem       key.Binding
-	RenameItem       key.Binding
-	RefreshList      key.Binding
-	NextBoard        key.Binding
-	PrevBoard        key.Binding
-	ToggleTitleBar   key.Binding
-	ToggleStatusBar  key.Binding
-	TogglePagination key.Binding
-	ToggleComplete   key.Binding
-	ToggleHelpMenu   key.Binding
-	Quit             key.Binding
-}
-
-// newListKeyMap initializes a new listKeyMap with custom bindings.
-func newListKeyMap() *listKeyMap {
-	return &listKeyMap{
-		AddItem: key.NewBinding(
-			key.WithKeys("a"),
-			key.WithHelp("a", "add item"),
-		),
-		DeleteItem: key.NewBinding(
-			key.WithKeys("d"),
-			key.WithHelp("d", "delete item"),
-		),
-		RenameItem: key.NewBinding(
-			key.WithKeys("r"),
-			key.WithHelp("r", "rename item"),
-		),
-		RefreshList: key.NewBinding(
-			key.WithKeys("R"),
-			key.WithHelp("R", "refresh board"),
-		),
-		NextBoard: key.NewBinding(
-			key.WithKeys("tab"),
-			key.WithHelp("tab", "next board"),
-		),
-		PrevBoard: key.NewBinding(
-			key.WithKeys("shift+tab"),
-			key.WithHelp("shift+tab", "prev board"),
-		),
-		ToggleTitleBar: key.NewBinding(
-			key.WithKeys("T"),
-			key.WithHelp("T", "toggle title"),
-		),
-		ToggleStatusBar: key.NewBinding(
-			key.WithKeys("B"),
-			key.WithHelp("B", "toggle status"),
-		),
-		TogglePagination: key.NewBinding(
-			key.WithKeys("P"),
-			key.WithHelp("P", "toggle pagination"),
-		),
-		ToggleComplete: key.NewBinding(
-			key.WithKeys(" "),
-			key.WithHelp("space", "toggle complete"),
-		),
-		ToggleHelpMenu: key.NewBinding(
-			key.WithKeys("?"),
-			key.WithHelp("?", "toggle help"),
-		),
-		Quit: key.NewBinding(
-			key.WithKeys("q", "esc"),
-			key.WithHelp("q", "quit"),
-		),
-	}
-}
-
-// ShortHelp returns keybindings to be shown in the mini help view.
-// It's part of the help.KeyMap interface.
-func (k listKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{
-		k.AddItem,
-		k.NextBoard,
-	}
-}
-
-// FullHelp returns keybindings for the expanded help view.
-// It's part of the help.KeyMap interface.
-func (k listKeyMap) FullHelp() [][]key.Binding {
-	return formatKeys([]key.Binding{
-		k.AddItem,
-		k.DeleteItem,
-		k.RenameItem,
-		k.RefreshList,
-		k.NextBoard,
-		k.PrevBoard,
-		k.ToggleTitleBar,
-		k.ToggleStatusBar,
-		k.TogglePagination,
-		k.ToggleComplete,
-	}, 4)
-}
-
-// Message types
-type errMsg struct {
-	err error
-}
-
-type boardsLoadedMsg struct{}
-
-type itemsLoadedMsg struct {
-	items []client.Item
-}
-
-type updateItemMsg struct {
-	err error
-}
-
-type createItemMsg struct {
-	item client.Item
-	err  error
-}
-
-// State represents the current input state of the UI.
-type State int
+// InputState represents the current input state of the UI.
+type InputState int
 
 const (
-	StateIdle State = iota
+	StateIdle InputState = iota
 	StateAddingName
 	StateAddingDesc
 	StateRenamingName
@@ -162,14 +46,14 @@ type Model struct {
 	Boards       []client.Board
 	CurrentBoard int
 	List         list.Model
-	Keys         *listKeyMap
+	Keys         *Keymap
 
 	// Input states
-	state       State
+	inputState  InputState
 	tempName    string
 	tempDesc    string
 	textInput   textinput.Model
-	currentItem *Item // Track the item being renamed
+	currentItem *Item
 
 	// Help
 	help     help.Model
@@ -178,10 +62,10 @@ type Model struct {
 
 // NewModel initializes a new UI model.
 func NewModel(cli *client.Client) *Model {
-	listKeys := newListKeyMap()
+	listKeys := newKeymap()
 
 	// Initialize list with custom delegate
-	delegate := newItemDelegate(listKeys)
+	delegate := NewDelegate(listKeys)
 	l := list.New(nil, delegate, 0, 0)
 	l.Title = "Loading boards..."
 	l.Styles.Title = titleStyle
@@ -197,7 +81,7 @@ func NewModel(cli *client.Client) *Model {
 		List:        l,
 		textInput:   ti,
 		showHelp:    false,
-		state:       StateIdle,
+		inputState:  StateIdle,
 		currentItem: nil,
 	}
 
@@ -306,12 +190,10 @@ func (m *Model) View() string {
 	return appStyle.Render(view)
 }
 
-// Helper Functions
-
 // isInputState checks if the current state is an input state.
 func (m *Model) isInputState() bool {
-	return m.state == StateAddingName || m.state == StateAddingDesc ||
-		m.state == StateRenamingName || m.state == StateRenamingDesc
+	return m.inputState == StateAddingName || m.inputState == StateAddingDesc ||
+		m.inputState == StateRenamingName || m.inputState == StateRenamingDesc
 }
 
 // handleInputState processes messages when in an input state.
@@ -326,21 +208,21 @@ func (m *Model) handleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		switch keyMsg.Type {
 		case tea.KeyEnter:
-			switch m.state {
+			switch m.inputState {
 			case StateAddingName:
 				m.tempName = m.textInput.Value()
-				m.state = StateAddingDesc
+				m.inputState = StateAddingDesc
 				m.textInput.Placeholder = "Enter item description"
 				m.textInput.SetValue("")
 				m.textInput.Focus()
 			case StateAddingDesc:
 				m.tempDesc = m.textInput.Value()
-				m.state = StateIdle
+				m.inputState = StateIdle
 				m.textInput.Blur()
 				cmds = append(cmds, m.createItem())
 			case StateRenamingName:
 				m.tempName = m.textInput.Value()
-				m.state = StateRenamingDesc
+				m.inputState = StateRenamingDesc
 				if m.currentItem != nil {
 					m.textInput.Placeholder = m.currentItem.Item.Description
 					m.textInput.SetValue(m.currentItem.Item.Description)
@@ -352,14 +234,14 @@ func (m *Model) handleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 				}
 			case StateRenamingDesc:
 				m.tempDesc = m.textInput.Value()
-				m.state = StateIdle
+				m.inputState = StateIdle
 				m.textInput.Blur()
 				cmds = append(cmds, m.updateItem())
 			}
 
 		case tea.KeyEsc:
 			// Cancel the current operation
-			m.state = StateIdle
+			m.inputState = StateIdle
 			m.textInput.Blur()
 			m.currentItem = nil
 		}
@@ -479,7 +361,7 @@ func (m *Model) initiateRename() tea.Cmd {
 		return m.List.NewStatusMessage(StatusMessageStyle("No item selected"))
 	}
 
-	m.state = StateRenamingName
+	m.inputState = StateRenamingName
 	index := m.List.Index()
 	item := m.List.Items()[index].(Item)
 	m.currentItem = &item
@@ -493,7 +375,7 @@ func (m *Model) initiateRename() tea.Cmd {
 
 // initiateAdd starts the adding process for a new item.
 func (m *Model) initiateAdd() tea.Cmd {
-	m.state = StateAddingName
+	m.inputState = StateAddingName
 	m.textInput.Placeholder = "Enter item name"
 	m.textInput.SetValue("")
 	m.textInput.Focus()

@@ -5,7 +5,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -18,17 +17,21 @@ var itemPadding = lipgloss.NewStyle().Padding(0, 2)
 // but adds a strikethrough to completed items and applies padding.
 type ListDelegate struct {
 	*list.DefaultDelegate // Embed as a pointer to avoid invalid indirection
+	Keymap                *Keymap
 	ShowDescription       bool
 }
 
 // NewDelegate initializes a new CustomDelegate with default styles.
-func NewDelegate() *ListDelegate {
+func NewDelegate(keys *Keymap) *ListDelegate {
 	delegate := list.NewDefaultDelegate()
 	delegate.ShowDescription = true
+	delegate.ShortHelpFunc = keys.ShortHelp
+	delegate.FullHelpFunc = keys.FullHelp
 
 	return &ListDelegate{
 		DefaultDelegate: &delegate,
 		ShowDescription: true,
+		Keymap:          keys,
 	}
 }
 
@@ -41,7 +44,7 @@ func (d *ListDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 
 	title := itm.Title()
 	desc := itm.Description()
-	completed := itm.Item.Completed
+	completed := itm.Completed
 
 	// Prevent text from exceeding list width
 	if m.Width() <= 0 {
@@ -54,7 +57,7 @@ func (d *ListDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 	if d.ShowDescription {
 		var lines []string
 		for i, line := range splitLines(desc) {
-			if i >= m.Height()-2 { // Adjusted to accommodate padding
+			if i >= m.Height()-2 {
 				break
 			}
 			lines = append(lines, truncate(line, textWidth, "..."))
@@ -99,19 +102,4 @@ func (d *ListDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 func (d *ListDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 	// You can add custom update logic here if needed
 	return d.DefaultDelegate.Update(msg, m)
-}
-
-// newItemDelegate creates a new CustomDelegate with minimal configuration.
-func newItemDelegate(keys *listKeyMap) list.ItemDelegate {
-	d := NewDelegate()
-
-	d.ShortHelpFunc = func() []key.Binding {
-		return keys.ShortHelp()
-	}
-
-	d.FullHelpFunc = func() [][]key.Binding {
-		return keys.FullHelp()
-	}
-
-	return d
 }
