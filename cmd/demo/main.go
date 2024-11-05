@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/rhajizada/donezo/internal/config"
 	"github.com/rhajizada/donezo/pkg/client"
+	"github.com/rhajizada/donezo/pkg/config"
 )
 
 func main() {

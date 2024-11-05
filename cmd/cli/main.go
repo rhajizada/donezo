@@ -6,9 +6,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/rhajizada/donezo/internal/config"
 	"github.com/rhajizada/donezo/internal/ui"
 	"github.com/rhajizada/donezo/pkg/client"
+	"github.com/rhajizada/donezo/pkg/config"
 )
 
 func main() {
