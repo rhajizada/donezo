@@ -7,9 +7,9 @@
 **donezo** is a simple todo list web application built with Go. Designed as an
 educational experiment, donezo leverages Go's standard `net/http` library
 enhanced with the new `mux` capabilities introduced in Go 1.22. It features a
-RESTful API, a Go API and a text-based user interface (TUI) built
-with the [`bubbletea`](https://github.com/charmbracelet/bubbletea) package. Additionally, donezo includes comprehensive API
-documentation available via `Swagger`.
+RESTful API, a Go API and a text-based TUI built with the
+[`bubbletea`](https://github.com/charmbracelet/bubbletea) package. Additionally,
+donezo includes comprehensive API documentation available via `Swagger`.
 
 ## Table of Contents
 
@@ -26,6 +26,7 @@ documentation available via `Swagger`.
 - [API Documentation](#api-documentation)
 - [Usage](#usage)
   - [Client API](#client-api)
+  - [TUI](#tui)
 
 ## Features
 
@@ -60,7 +61,8 @@ implementing diverse application components:
 - **SQLC**: SQL to Go code generator. [Install SQLC](https://sqlc.dev/)
 
 ### Build
-Run `make build` to compile the server, and create-token binaries located in the `bin/` directory.
+
+Run `make build` to compile the server, create-token and tui executables to `bin/` directory.
 
 ### Configuration
 
@@ -72,7 +74,6 @@ database: /data/db.sqlite
 jwt:
   secret: your_jwt_secret_key_here
   expiration: 24h
-
 # port: The port on which the server will run.
 # database: Path to the SQLite database file.
 # jwt.secret: Secret key for signing JWT tokens.
@@ -82,18 +83,23 @@ jwt:
 Ensure that the `config.yaml` file has appropriate permissions (`0600`) to secure sensitive information, especially the JWT secret.
 
 ## Running the Application
+
 ### Locally
+
 Start the server using the Makefile:
+
 ```bash
 make run
 ```
 
 This command will:
+
 - Build executables.
 - Apply database migrations using goose.
 - Start the REST API server on the configured port.
 
 ### Using Docker
+
 You can run the following `make` target to just build the image.
 
 ```bash
@@ -109,6 +115,7 @@ make run-container
 The Makefile handles building the Docker image and running the container with the necessary configurations.
 
 ## Makefile Targets
+
 ```
 build                    Compile the executables
 swaggger                 Genearate swagger docs
@@ -129,12 +136,13 @@ shell                    Launch shell inside docker container
 Refer to the Makefile for additional targets and customization options.
 
 ## API Documentation
+
 `donezo` provides comprehensive API documentation using Swagger. After running the server, access the Swagger UI at:
 
-http://localhost:8000/swagger
-
+<http://localhost:8000/swagger>
 
 ## Usage
+
 ### Client API
 
 The client API allows you to interact with donezo programmatically.
@@ -175,3 +183,14 @@ func main() {
     log.Printf("Boards: %+v", boards)
 }
 ```
+
+### TUI
+
+The TUI provides a seamless way to manage your boards and items directly from
+the terminal. It connects to `donezo` server using REST API. Before running you
+will need to generate an API token and create a `configuration` file. If
+`donezo` is deployed locally you can run `create-token` make target that will
+output a `cat` command that will create a configuration file located at
+`~/.config/donezo/config.yaml`. If you server deployed in `Docker` you can
+run `make create-token-container` make target to generate token. Once
+configuration is created you can run `./bin/donezo` to launch TUI.

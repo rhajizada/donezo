@@ -21,6 +21,7 @@ endef
 build:
 	@go build -o bin/server ./cmd/server
 	@go build -o bin/create-token ./cmd/create-token
+	@go build -o bin/donezo ./cmd/tui
 
 
 .PHONY: swagger
