@@ -122,6 +122,8 @@ swaggger                 Genearate swagger docs
 sqlc                     Generate repository using sqlc
 generate-config          Generates a compatible config.yaml
 run                      Build and run in development mode
+install                  Install TUI
+uninstall                Uninstall TUI
 clean                    Clean project and previous builds
 deps                     Download modules
 build-image              Build docker image
@@ -130,7 +132,7 @@ run-container            Launch a docker container
 rm-container             Stops and deletes container
 create-token             Create authentication token
 create-token-container   Create authentication token in running docker container
-shell                    Launch shell inside docker container
+shell                    Launch shell inside docker container```
 ```
 
 Refer to the Makefile for additional targets and customization options.
@@ -182,15 +184,61 @@ func main() {
     }
     log.Printf("Boards: %+v", boards)
 }
-```
+````
 
 ### TUI
 
 The TUI provides a seamless way to manage your boards and items directly from
-the terminal. It connects to `donezo` server using REST API. Before running you
-will need to generate an API token and create a `configuration` file. If
-`donezo` is deployed locally you can run `create-token` make target that will
-output a `cat` command that will create a configuration file located at
-`~/.config/donezo/config.yaml`. If you server deployed in `Docker` you can
-run `make create-token-container` make target to generate token. Once
-configuration is created you can run `./bin/donezo` to launch TUI.
+the terminal. It connects to the donezo server using the REST API. Before
+running the TUI, you need to generate an API token and create a configuration
+file.
+
+Prerequisites
+
+- Generate an API Token
+- Create a Configuration File
+
+#### Generating an API Token
+
+If donezo is deployed locally run the following `make` target to generate an API
+token and create the configuration file:
+
+```bash
+make create-token
+```
+
+This command will output a cat command that creates a configuration file located
+at `~/.config/donezo/config.yaml`.
+
+If donezo is deployed using Docker Run the following `make` target to generate
+an API token for a Docker-deployed server:
+
+```bash
+make create-token-container
+```
+
+Ensure that the configuration file is properly set up at
+`~/.config/donezo/config.yaml` with the generated API token.
+
+#### Launching the TUI
+
+Once the configuration file is in place, you can launch the TUI by executing:
+
+```bash
+./bin/donezo
+```
+
+#### Installing the TUI
+
+For added convenience, you can install the TUI binary to `~/.local/bin/` by running:
+
+```bash
+make install
+```
+
+You can also add `~/.local/bin` to your `PATH` to launch the TUI from anywhere
+in your terminal without specifying the full path:
+
+```bash
+donezo
+```

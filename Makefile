@@ -53,6 +53,20 @@ run: pre
 	@go run cmd/server/main.go -config "$(CONFIG_FILE)"
 
 
+.PHONY: install
+## install: Install TUI
+install: build
+	@mkdir -p $(HOME)/.local/bin
+	@cp ./bin/donezo $(HOME)/.local/bin
+	@echo "Installed donezo to '$(HOME)/.local/bin'. Please add '$(HOME)/.local/bin' to your PATH."
+
+
+.PHONY: uninstall
+## uninstall: Uninstall TUI
+uninstall:
+	@rm $(HOME)/.local/bin/donezo
+
+
 .PHONY: clean
 ## clean: Clean project and previous builds
 clean:
