@@ -131,9 +131,22 @@ func (m *AppModel) Back() (tea.Cmd, bool) {
 	handled := false
 	if len(m.ViewStack) > 1 {
 		{
-			m.Pop()
+			blist, ok := m.ViewStack[len(m.ViewStack)-1].(boards.MenuModel)
+			if ok {
+				if blist.State == boards.DefaultState {
+					m.Pop()
+					handled = true
+				}
+			}
+			ilist, ok := m.ViewStack[len(m.ViewStack)-1].(items.ItemMenuModel)
+			if ok {
+				if ilist.Context.State == items.DefaultState {
+					m.Pop()
+
+					handled = true
+				}
+			}
 		}
-		handled = true
 	} else {
 		cmd = tea.Quit
 		handled = true
