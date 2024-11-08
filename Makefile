@@ -17,11 +17,10 @@ endef
 
 
 .PHONY: build
-## build: Compile the packages
+## build: Compile the executables
 build:
 	@go build -o bin/server ./cmd/server
 	@go build -o bin/create-token ./cmd/create-token
-	@go build -o bin/cli ./cmd/cli/
 
 
 .PHONY: swagger
@@ -107,11 +106,6 @@ rm-container:
 ## create-token: Create authentication token
 create-token: pre
 	@go run ./cmd/create-token/main.go -config $(CONFIG_FILE) $(ARGS)
-
-.PHONY: cli
-## cli: Launch CLI
-cli:
-	@go run ./cmd/cli/main.go $(ARGS)
 
 
 .PHONY: create-token-container
