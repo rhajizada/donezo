@@ -17,16 +17,9 @@
 
 ## Installation
 
-1. Clone the repository:
-
 ```bash
 git clone https://github.com/rhajizada/donezo.git
 cd donezo
-```
-
-2. Install the application:
-
-```bash
 make install
 ```
 

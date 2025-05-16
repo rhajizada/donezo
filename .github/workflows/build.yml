@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "*"
+
+env:
+  GOPATH: /go_path
+  GOCACHE: /go_cache
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          args: --timeout 5m
+
+  build:
+    name: build
+    needs: lint
+    strategy:
+      matrix:
+        os: [linux, windows, darwin]
+        arch: [amd64, arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+      - name: Set environment
+        run: |
+          echo "GOOS=${{ matrix.os }}" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+      - name: Build
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo.exe
+          else
+            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo
+          fi
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: "donezo-${{ matrix.os }}-${{ matrix.arch }}"
+          path: bin/*
