@@ -3,8 +3,8 @@ package itemsbyboard
 import (
 	"strings"
 
-	"github.com/rhajizada/donezo-mini/internal/service"
-	"github.com/rhajizada/donezo-mini/internal/tui/itemlist"
+	"github.com/rhajizada/donezo/internal/service"
+	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
 
 // Item represents item in the list

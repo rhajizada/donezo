@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/rhajizada/donezo-mini/internal/service"
-	"github.com/rhajizada/donezo-mini/internal/tui/styles"
+	"github.com/rhajizada/donezo/internal/service"
+	"github.com/rhajizada/donezo/internal/tui/styles"
 	"golang.design/x/clipboard"
 )
 

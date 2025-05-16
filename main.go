@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 
 	"github.com/pressly/goose/v3"
-	"github.com/rhajizada/donezo-mini/internal/repository"
-	"github.com/rhajizada/donezo-mini/internal/service"
-	"github.com/rhajizada/donezo-mini/internal/tui/app"
+	"github.com/rhajizada/donezo/internal/repository"
+	"github.com/rhajizada/donezo/internal/service"
+	"github.com/rhajizada/donezo/internal/tui/app"
 	"golang.design/x/clipboard"
 
 	tea "github.com/charmbracelet/bubbletea"

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rhajizada/donezo-mini/internal/service"
-	"github.com/rhajizada/donezo-mini/internal/tui/boards"
-	"github.com/rhajizada/donezo-mini/internal/tui/styles"
+	"github.com/rhajizada/donezo/internal/service"
+	"github.com/rhajizada/donezo/internal/tui/boards"
+	"github.com/rhajizada/donezo/internal/tui/styles"
 	"golang.design/x/clipboard"
 
 	tea "github.com/charmbracelet/bubbletea"

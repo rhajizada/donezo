@@ -5,10 +5,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/rhajizada/donezo-mini/internal/tui/styles"
+	"github.com/rhajizada/donezo/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/rhajizada/donezo-mini/internal/tui/itemlist"
+	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
 
 // Define custom styles

@@ -3,8 +3,8 @@ package itemsbytag
 import (
 	"strings"
 
-	"github.com/rhajizada/donezo-mini/internal/tui/styles"
-	"github.com/rhajizada/donezo-mini/internal/tui/tags"
+	"github.com/rhajizada/donezo/internal/tui/styles"
+	"github.com/rhajizada/donezo/internal/tui/tags"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

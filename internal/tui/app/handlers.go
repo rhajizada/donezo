@@ -4,10 +4,10 @@ import (
 	"errors"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/rhajizada/donezo-mini/internal/tui/boards"
-	"github.com/rhajizada/donezo-mini/internal/tui/itemsbyboard"
-	"github.com/rhajizada/donezo-mini/internal/tui/itemsbytag"
-	"github.com/rhajizada/donezo-mini/internal/tui/tags"
+	"github.com/rhajizada/donezo/internal/tui/boards"
+	"github.com/rhajizada/donezo/internal/tui/itemsbyboard"
+	"github.com/rhajizada/donezo/internal/tui/itemsbytag"
+	"github.com/rhajizada/donezo/internal/tui/tags"
 )
 
 func (m *AppModel) NextBoard() (tea.Cmd, bool) {

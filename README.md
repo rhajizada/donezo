@@ -1,9 +1,10 @@
-# donezo-mini
+# donezo
 
-**donezo-mini** is a streamlined version of the
-[**donezo**](https://github.com/rhajizada/donezo.git) project, focused solely on
-managing tasks through a text-based user interface (TUI) without web components.
-The TUI interacts directly with a local SQLite database to manage boards and items.
+![Go](https://img.shields.io/badge/Go-1.22-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+**donezo** is a simple TUI to-do app in written Go using
+[Bubble Tea](https://github.com/charmbracelet/bubbletea) and SQLite.
 
 ## Features
 
@@ -12,14 +13,15 @@ The TUI interacts directly with a local SQLite database to manage boards and ite
 - SQLite Database: Data is stored locally in an SQLite database.
 - Boards and Items: Create, update, delete, and list boards and items, with
   support for toggling item completion status.
+- Tags: Tag, un-tag items, view items by tags.
 
 ## Installation
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/rhajizada/donezo-mini.git
-cd donezo-mini
+git clone https://github.com/rhajizada/donezo.git
+cd donezo
 ```
 
 2. Install the application:
@@ -30,13 +32,9 @@ make install
 
 ## Roadmap
 
-- 0.1.0
-
+- 1.0
   - Implement comprehensive test coverage for all modules.
   - Set up CI using GitHub Actions.
   - Automate releases and publish them via GitHub Actions.
-
-- 0.2.0
-
   - Add support for custom app styling.
   - Introduce configuration options for app customization.

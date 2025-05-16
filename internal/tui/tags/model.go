@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/rhajizada/donezo-mini/internal/service"
+	"github.com/rhajizada/donezo/internal/service"
 )
 
 type MenuModel struct {

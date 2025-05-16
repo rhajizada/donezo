@@ -3,7 +3,7 @@ package tags
 import (
 	"fmt"
 
-	"github.com/rhajizada/donezo-mini/internal/tui/styles"
+	"github.com/rhajizada/donezo/internal/tui/styles"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"

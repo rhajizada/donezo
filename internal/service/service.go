@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rhajizada/donezo-mini/internal/repository"
+	"github.com/rhajizada/donezo/internal/repository"
 )
 
 type Service struct {

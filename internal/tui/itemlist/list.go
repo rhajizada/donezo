@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rhajizada/donezo-mini/internal/tui/styles"
+	"github.com/rhajizada/donezo/internal/tui/styles"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

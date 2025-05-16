@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/rhajizada/donezo-mini/internal/repository"
+	"github.com/rhajizada/donezo/internal/repository"
 )
 
 type Board struct {

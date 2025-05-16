@@ -2,7 +2,7 @@ package boards
 
 import (
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/rhajizada/donezo-mini/internal/service"
+	"github.com/rhajizada/donezo/internal/service"
 )
 
 // Item represents item in the list

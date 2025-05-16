@@ -5,9 +5,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/rhajizada/donezo-mini/internal/service"
-	"github.com/rhajizada/donezo-mini/internal/tui/boards"
-	"github.com/rhajizada/donezo-mini/internal/tui/itemlist"
+	"github.com/rhajizada/donezo/internal/service"
+	"github.com/rhajizada/donezo/internal/tui/boards"
+	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
 
 type MenuModel struct {

@@ -1,6 +1,6 @@
 package itemsbytag
 
-import "github.com/rhajizada/donezo-mini/internal/service"
+import "github.com/rhajizada/donezo/internal/service"
 
 type ErrorMsg struct {
 	Error error

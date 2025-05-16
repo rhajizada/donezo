@@ -1,7 +1,7 @@
 package itemsbyboard
 
 import (
-	"github.com/rhajizada/donezo-mini/internal/tui/styles"
+	"github.com/rhajizada/donezo/internal/tui/styles"
 )
 
 func (m MenuModel) View() string {
