@@ -247,9 +247,10 @@ func (m *AppModel) HandleKeyInput(msg tea.KeyMsg) (tea.Cmd, bool) {
 			cmd = m.ToggleMainMenu()
 			handled = true
 		case tea.KeyEnter.String():
-			if m.MenuType == MenuBoards {
+			switch m.MenuType {
+			case MenuBoards:
 				cmd, handled = m.SelectBoard()
-			} else if m.MenuType == MenuTags {
+			case MenuTags:
 				cmd, handled = m.SelectTag()
 			}
 		case tea.KeyBackspace.String():

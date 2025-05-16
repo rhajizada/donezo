@@ -57,7 +57,11 @@ func main() {
 	if err != nil {
 		log.Panicf("failed to open database %s: %v", dbPath, err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Panicf("failed to close database %s: %v", dbPath, err)
+		}
+	}()
 
 	// Set Goose dialect to SQLite
 	if err := goose.SetDialect("sqlite3"); err != nil {

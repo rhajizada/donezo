@@ -1,15 +1,35 @@
 .PHONY: build
-## build: Compile the executables
+## build: Build project
 build:
 	go build -ldflags="-s -w -X main.Version=$$(git rev-parse --short HEAD)" -o bin/donezo
 
 
+.PHONY: clean
+## clean: Remove previous builds
+clean:
+	@rm bin/*
 
-.PHONY: sqlc
-## sqlc: Generate repository using sqlc
-sqlc:
-	@sqlc generate
 
+.PHONY: deps
+## deps: Install dependecies
+deps:
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest && \
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest \
+	@go mod download
+
+
+.PHONY: install
+## install: Install donezo
+install: build
+	@mkdir -p $(HOME)/.local/bin
+	@cp ./bin/donezo $(HOME)/.local/bin
+	@echo "Installed donezo to '$(HOME)/.local/bin'. Please add '$(HOME)/.local/bin' to your PATH."
+
+
+.PHONY: lint
+## lint: Lint source code
+lint:
+	@golangci-lint run
 
 
 .PHONY: run
@@ -18,36 +38,16 @@ run:
 	@go run main.go
 
 
-
-.PHONY: install
-## install: Install TUI
-install: build
-	@mkdir -p $(HOME)/.local/bin
-	@cp ./bin/donezo $(HOME)/.local/bin
-	@echo "Installed donezo to '$(HOME)/.local/bin'. Please add '$(HOME)/.local/bin' to your PATH."
-
+.PHONY: sqlc
+## sqlc: Generate repository code using sqlc
+sqlc:
+	@sqlc generate
 
 
 .PHONY: uninstall
 ## uninstall: Uninstall TUI
 uninstall:
 	@rm $(HOME)/.local/bin/donezo
-
-
-
-.PHONY: clean
-## clean: Clean project and previous builds
-clean:
-	@rm bin/*
-
-
-
-.PHONY: deps
-## deps: Download modules
-deps:
-	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest && \
-	@go mod download
-
 
 
 .PHONY: help
