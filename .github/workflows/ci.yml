@@ -78,6 +78,7 @@ jobs:
           CGO_ENABLED: 1
         run: |
           VERSION=$(git rev-parse --short HEAD)
+          mkdir -p bin
           if [ "${{ matrix.os }}" = "windows" ]; then
             go build \
               -ldflags="-s -w -X main.Version=$VERSION" \
