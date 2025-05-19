@@ -147,6 +147,9 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 // HandleKeyInput processes key inputs not handles by list.Model
 func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
+	if m.List.SettingFilter() {
+		return nil
+	}
 	switch {
 	case key.Matches(msg, m.Keys.DeleteItem):
 		cmd = m.DeleteItem()

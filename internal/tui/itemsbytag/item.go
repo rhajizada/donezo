@@ -39,3 +39,4 @@ func (i Item) Footer() string {
 	return message
 }
 func (i Item) FilterValue() string { return i.Itm.Title }
+func (i Item) HideValue() bool     { return i.Itm.Completed }

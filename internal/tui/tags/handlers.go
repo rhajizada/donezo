@@ -44,13 +44,15 @@ func (m *MenuModel) HandleDeleteTag(msg DeleteTagMsg) tea.Cmd {
 // HandleKeyInput processes key inputs not handles by list.Model
 func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
-	switch {
-	case key.Matches(msg, m.Keys.DeleteTag):
-		cmd = m.DeleteTag()
-	case key.Matches(msg, m.Keys.RefreshList):
-		cmd = m.ListTags()
-	case key.Matches(msg, m.Keys.Copy):
-		cmd = m.Copy()
+	if !m.List.SettingFilter() {
+		switch {
+		case key.Matches(msg, m.Keys.DeleteTag):
+			cmd = m.DeleteTag()
+		case key.Matches(msg, m.Keys.RefreshList):
+			cmd = m.ListTags()
+		case key.Matches(msg, m.Keys.Copy):
+			cmd = m.Copy()
+		}
 	}
 	return cmd
 }

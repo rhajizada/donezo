@@ -29,6 +29,8 @@ type Item interface {
 	// FilterValue is the value we use when filtering against this item when
 	// we're filtering the list.
 	FilterValue() string
+	// HideValue is the value we use when we hide items.
+	HideValue() bool
 }
 
 // ItemDelegate encapsulates the general functionality for all list items. The
@@ -145,6 +147,7 @@ type Model struct {
 	showPagination   bool
 	showHelp         bool
 	filteringEnabled bool
+	hideItems        bool
 
 	itemNameSingular string
 	itemNamePlural   string
@@ -456,12 +459,27 @@ func (m *Model) SetDelegate(d ItemDelegate) {
 	m.updatePagination()
 }
 
-// VisibleItems returns the total items available to be shown.
+// VisibleItems returns the items available to be shown, applying
+// the text‐filter first (if any) and then the HideValue flag.
 func (m Model) VisibleItems() []Item {
+	var base []Item
 	if m.filterState != Unfiltered {
-		return m.filteredItems.items()
+		base = m.filteredItems.items()
+	} else {
+		base = m.items
 	}
-	return m.items
+
+	if !m.hideItems {
+		return base
+	}
+
+	var out []Item
+	for _, it := range base {
+		if !it.HideValue() {
+			out = append(out, it)
+		}
+	}
+	return out
 }
 
 // SelectedItem returns the current selected item in the list.
@@ -605,6 +623,16 @@ func (m Model) FilterValue() string {
 // implementing this component.
 func (m Model) SettingFilter() bool {
 	return m.filterState == Filtering
+}
+
+// ToggleHide flips the “hide completed” state.
+func (m *Model) ToggleHide() {
+	m.hideItems = !m.hideItems
+	if !m.hideItems && m.IsFiltered() {
+		filterItems(*m)
+	}
+	m.updatePagination()
+	m.cursor = 0
 }
 
 // IsFiltered returns whether or not the list is currently filtered.
@@ -895,7 +923,8 @@ func (m *Model) handleBrowsing(msg tea.Msg) tea.Cmd {
 			m.FilterInput.Focus()
 			m.updateKeybindings()
 			return textinput.Blink
-
+		case key.Matches(msg, m.KeyMap.ToggleHide):
+			m.ToggleHide()
 		case key.Matches(msg, m.KeyMap.ShowFullHelp):
 			fallthrough
 		case key.Matches(msg, m.KeyMap.CloseFullHelp):
@@ -991,6 +1020,7 @@ func (m Model) ShortHelp() []key.Binding {
 
 	kb = append(kb,
 		m.KeyMap.Filter,
+		m.KeyMap.ToggleHide,
 		m.KeyMap.ClearFilter,
 		m.KeyMap.AcceptWhileFiltering,
 		m.KeyMap.CancelWhileFiltering,
@@ -1030,6 +1060,7 @@ func (m Model) FullHelp() [][]key.Binding {
 
 	listLevelBindings := []key.Binding{
 		m.KeyMap.Filter,
+		m.KeyMap.ToggleHide,
 		m.KeyMap.ClearFilter,
 		m.KeyMap.AcceptWhileFiltering,
 		m.KeyMap.CancelWhileFiltering,
@@ -1074,8 +1105,11 @@ func (m Model) View() string {
 
 	var footer string
 	if len(m.Items()) > 0 {
-		footer = styles.Footer.Render(m.SelectedItem().(DefaultItem).Footer())
-		availHeight -= lipgloss.Height(footer)
+		selectedItem, ok := m.SelectedItem().(DefaultItem)
+		if ok {
+			footer = styles.Footer.Render(selectedItem.Footer())
+			availHeight -= lipgloss.Height(footer)
+		}
 	}
 
 	var help string
