@@ -59,7 +59,7 @@ jobs:
           fi
           # MinGW-W64 for Windows builds
           if [ "${{ matrix.os }}" = "windows" ]; then
-            sudo apt-get install -y gcc-mingw-w64
+            sudo apt-get install -y gcc-mingw-w64 gcc-aarch64-w64-mingw32 binutils-mingw-w64-aarch64
           fi
 
       - name: Configure Windows compiler
