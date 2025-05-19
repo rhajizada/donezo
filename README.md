@@ -1,6 +1,6 @@
 # donezo
 
-![Go](https://img.shields.io/badge/Go-1.22-blue.svg)
+![Go](https://img.shields.io/badge/Go-1.24-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![ci](https://github.com/rhajizada/donezo/actions/workflows/ci.yml/badge.svg)
 
