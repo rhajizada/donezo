@@ -1074,8 +1074,11 @@ func (m Model) View() string {
 
 	var footer string
 	if len(m.Items()) > 0 {
-		footer = styles.Footer.Render(m.SelectedItem().(DefaultItem).Footer())
-		availHeight -= lipgloss.Height(footer)
+		selectedItem, ok := m.SelectedItem().(DefaultItem)
+		if ok {
+			footer = styles.Footer.Render(selectedItem.Footer())
+			availHeight -= lipgloss.Height(footer)
+		}
 	}
 
 	var help string

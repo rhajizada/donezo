@@ -116,7 +116,7 @@ func (m *AppModel) SelectBoard() (tea.Cmd, bool) {
 	handled := false
 	// If on the board view, switch to the item view
 	if blist, ok := m.ViewStack[len(m.ViewStack)-1].(boards.MenuModel); ok {
-		if blist.State == boards.DefaultState {
+		if blist.State == boards.DefaultState && !blist.List.SettingFilter() {
 			itemMenu := itemsbyboard.New(m.ctx, m.Service, &blist)
 			m.Push(itemMenu)
 			cmd = tea.Batch(itemMenu.Init())
@@ -193,13 +193,15 @@ func (m *AppModel) SelectTag() (tea.Cmd, bool) {
 	handled := false
 	// If the current view is the tags menu...
 	if tagMenu, ok := m.ViewStack[len(m.ViewStack)-1].(tags.MenuModel); ok {
-		// Create an items-by-tag model.
-		// Note: itemsbytag.NewModel expects a pointer to the tag menu.
-		itemMenu := itemsbytag.New(m.ctx, m.Service, &tagMenu)
-		// Push the new view onto the stack.
-		m.Push(itemMenu)
-		cmd = tea.Batch(itemMenu.Init())
-		handled = true
+		if !tagMenu.List.SettingFilter() {
+			// Create an items-by-tag model.
+			// Note: itemsbytag.NewModel expects a pointer to the tag menu.
+			itemMenu := itemsbytag.New(m.ctx, m.Service, &tagMenu)
+			// Push the new view onto the stack.
+			m.Push(itemMenu)
+			cmd = tea.Batch(itemMenu.Init())
+			handled = true
+		}
 	}
 	return cmd, handled
 }
@@ -209,21 +211,21 @@ func (m *AppModel) Back() (tea.Cmd, bool) {
 	handled := false
 	if len(m.ViewStack) > 0 {
 		// Check if the top view is a boards menu.
-		if blist, ok := m.ViewStack[len(m.ViewStack)-1].(boards.MenuModel); ok {
+		if blist, ok := m.ViewStack[len(m.ViewStack)-1].(boards.MenuModel); ok && !blist.List.SettingFilter() {
 			if blist.State == boards.DefaultState {
 				m.Pop()
 				handled = true
 			}
 		}
 		// Check if the top view is an items-by-board view.
-		if ilist, ok := m.ViewStack[len(m.ViewStack)-1].(itemsbyboard.MenuModel); ok {
+		if ilist, ok := m.ViewStack[len(m.ViewStack)-1].(itemsbyboard.MenuModel); ok && !ilist.List.SettingFilter() {
 			if ilist.Context.State == itemsbyboard.DefaultState {
 				m.Pop()
 				handled = true
 			}
 		}
 		// Also check if the top view is an items-by-tag view.
-		if itag, ok := m.ViewStack[len(m.ViewStack)-1].(itemsbytag.MenuModel); ok {
+		if itag, ok := m.ViewStack[len(m.ViewStack)-1].(itemsbytag.MenuModel); ok && !itag.List.SettingFilter() {
 			if itag.Context.State == itemsbytag.DefaultState {
 				m.Pop()
 				handled = true
@@ -243,7 +245,6 @@ func (m *AppModel) HandleKeyInput(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if len(m.ViewStack) == 1 {
 		switch msg.String() {
 		case tea.KeyTab.String(), tea.KeyShiftTab.String():
-			// Toggle between boards and tags.
 			cmd = m.ToggleMainMenu()
 			handled = true
 		case tea.KeyEnter.String():
@@ -257,30 +258,37 @@ func (m *AppModel) HandleKeyInput(msg tea.KeyMsg) (tea.Cmd, bool) {
 			cmd, handled = m.Back()
 		}
 	} else {
-		// When an items view is active, dispatch based on its type.
-		if _, ok := m.ViewStack[len(m.ViewStack)-1].(itemsbytag.MenuModel); ok {
-			switch msg.String() {
-			case tea.KeyTab.String():
-				cmd, handled = m.NextTag()
-			case tea.KeyShiftTab.String():
-				cmd, handled = m.PreviousTag()
-			case tea.KeyEnter.String():
-				// In tag view, you might choose not to do any action on Enter.
-				cmd = nil
-				handled = false
-			case tea.KeyBackspace.String():
-				cmd, handled = m.Back()
+		top := m.ViewStack[len(m.ViewStack)-1]
+		switch v := top.(type) {
+		case itemsbytag.MenuModel:
+			filtering := v.List.SettingFilter()
+			if !filtering {
+				switch msg.String() {
+				case tea.KeyTab.String():
+					cmd, handled = m.NextTag()
+				case tea.KeyShiftTab.String():
+					cmd, handled = m.PreviousTag()
+				case tea.KeyEnter.String():
+					cmd = nil
+					handled = false
+				case tea.KeyBackspace.String():
+					cmd, handled = m.Back()
+				}
 			}
-		} else if _, ok := m.ViewStack[len(m.ViewStack)-1].(itemsbyboard.MenuModel); ok {
-			switch msg.String() {
-			case tea.KeyTab.String():
-				cmd, handled = m.NextBoard()
-			case tea.KeyShiftTab.String():
-				cmd, handled = m.PreviousBoard()
-			case tea.KeyEnter.String():
-				cmd, handled = m.SelectBoard()
-			case tea.KeyBackspace.String():
-				cmd, handled = m.Back()
+
+		case itemsbyboard.MenuModel:
+			filtering := v.List.SettingFilter()
+			if !filtering {
+				switch msg.String() {
+				case tea.KeyTab.String():
+					cmd, handled = m.NextBoard()
+				case tea.KeyShiftTab.String():
+					cmd, handled = m.PreviousBoard()
+				case tea.KeyEnter.String():
+					cmd, handled = m.SelectBoard()
+				case tea.KeyBackspace.String():
+					cmd, handled = m.Back()
+				}
 			}
 		}
 	}

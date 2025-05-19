@@ -111,17 +111,19 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 // HandleKeyInput processes key inputs not handles by list.Model
 func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
-	switch {
-	case key.Matches(msg, m.Keys.CreateBoard):
-		cmd = m.InitCreateBoard()
-	case key.Matches(msg, m.Keys.DeleteBoard):
-		cmd = m.DeleteBoard()
-	case key.Matches(msg, m.Keys.RenameBoard):
-		cmd = m.InitRenameBoard()
-	case key.Matches(msg, m.Keys.RefreshList):
-		cmd = m.ListBoards()
-	case key.Matches(msg, m.Keys.Copy):
-		cmd = m.Copy()
+	if !m.List.SettingFilter() {
+		switch {
+		case key.Matches(msg, m.Keys.CreateBoard):
+			cmd = m.InitCreateBoard()
+		case key.Matches(msg, m.Keys.DeleteBoard):
+			cmd = m.DeleteBoard()
+		case key.Matches(msg, m.Keys.RenameBoard):
+			cmd = m.InitRenameBoard()
+		case key.Matches(msg, m.Keys.RefreshList):
+			cmd = m.ListBoards()
+		case key.Matches(msg, m.Keys.Copy):
+			cmd = m.Copy()
+		}
 	}
 	return cmd
 }
