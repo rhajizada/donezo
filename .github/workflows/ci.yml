@@ -22,8 +22,9 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Install X11
-        run: sudo apt install libx11-dev
+      - name: Install X11 headers (for Linux clipboard cgo)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential libx11-dev
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
@@ -35,9 +36,21 @@ jobs:
     needs: lint
     strategy:
       matrix:
-        os: [linux, darwin]
-        arch: [amd64, arm64]
-    runs-on: ${{ matrix.os == 'darwin' && 'macos-latest' || 'ubuntu-latest' }}
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -49,31 +62,29 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Install cross-compile deps
+      - name: Install Linux build deps
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libx11-dev
+          sudo apt-get install -y build-essential libx11-dev
 
       - name: Build
         env:
           CGO_ENABLED: 1
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.sha }}
         run: |
           mkdir -p bin
-          VERSION=$(git rev-parse --short HEAD)
-          PKG="."
-          OUT="./bin/donezo-${GOOS}-${GOARCH}"
-          go build \
-            -ldflags="-s -w -X main.Version=${VERSION}" \
-            -o "$OUT" \
-            "$PKG"
+          OUT="bin/donezo-${GOOS}-${GOARCH}"
+          if [ "$GOOS" = "windows" ]; then
+            OUT="${OUT}.exe"
+          fi
+          echo "Building for $GOOS/$GOARCH → $OUT"
+          go build -ldflags="-s -w -X main.Version=${VERSION}" -o "${OUT}" .
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: donezo-${{ matrix.os }}-${{ matrix.arch }}
+          name: donezo-${{ matrix.goos }}-${{ matrix.goarch }}
           path: bin/*
