@@ -49,29 +49,19 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Install cross-compile toolchains
+      - name: Install cross-compile deps
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          # X11 libs for Linux builds
-          if [ "${{ matrix.os }}" = "linux" ]; then
-            sudo apt-get install -y libx11-dev
-          fi
-          # MinGW-W64 for Windows builds
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            sudo apt-get install -y mingw-w64
-          fi
+          sudo apt-get install -y clang lld libx11-dev mingw-w64
 
-      - name: Configure Windows compiler
-        if: matrix.os == 'windows'
+      - name: Configure ARM64-Windows compiler
+        if: matrix.os == 'windows' && matrix.arch == 'arm64'
         run: |
-          if [ "${{ matrix.arch }}" = "amd64" ]; then
-            echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV
-            echo "CXX=x86_64-w64-mingw32-g++" >> $GITHUB_ENV
-          else
-            echo "CC=aarch64-w64-mingw32-gcc" >> $GITHUB_ENV
-            echo "CXX=aarch64-w64-mingw32-g++" >> $GITHUB_ENV
-          fi
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+          echo "CGO_CFLAGS=--target=aarch64-w64-mingw32" >> $GITHUB_ENV
+          echo "CGO_LDFLAGS=-fuse-ld=lld --target=aarch64-w64-mingw32" >> $GITHUB_ENV
 
       - name: Build
         env:
