@@ -61,5 +61,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
-          name: donezo-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: donezo-${{ matrix.os }}-${{ matrix.arch }}
           path: bin/*
