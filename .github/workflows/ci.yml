@@ -37,30 +37,63 @@ jobs:
       matrix:
         os: [linux, windows, darwin]
         arch: [amd64, arm64]
-    runs-on: ubuntu-latest
+    # darwin on macOS, everything else on Ubuntu
+    runs-on: ${{ matrix.os == 'darwin' && 'macos-latest' || 'ubuntu-latest' }}
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           check-latest: true
-      - name: Install X11
-        run: sudo apt install libx11-dev
-      - name: Set environment
+
+      # Install Linux/Windows cross-compile deps on Ubuntu runners
+      - name: Install cross-compile toolchains
+        if: runner.os == 'Linux'
         run: |
-          echo "GOOS=${{ matrix.os }}" >> $GITHUB_ENV
-          echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
-          echo "CGO_ENABLED=1" >> $GITHUB_ENV
-      - name: Build
-        run: |
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo.exe
-          else
-            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo
+          sudo apt-get update
+          # X11 libs for Linux builds
+          if [ "${{ matrix.os }}" = "linux" ]; then
+            sudo apt-get install -y libx11-dev
           fi
-      - name: Upload
+          # MinGW-W64 for Windows builds
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            sudo apt-get install -y gcc-mingw-w64
+          fi
+
+      # Point Go at the correct cross-compiler for Windows
+      - name: Configure Windows compiler
+        if: matrix.os == 'windows'
+        run: |
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV
+            echo "CXX=x86_64-w64-mingw32-g++" >> $GITHUB_ENV
+          else
+            echo "CC=aarch64-w64-mingw32-gcc" >> $GITHUB_ENV
+            echo "CXX=aarch64-w64-mingw32-g++" >> $GITHUB_ENV
+          fi
+
+      - name: Build
+        env:
+          CGO_ENABLED: 1
+        run: |
+          VERSION=$(git rev-parse --short HEAD)
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            go build \
+              -ldflags="-s -w -X main.Version=$VERSION" \
+              -o bin/donezo-windows-${{ matrix.arch }}.exe \
+              ./...
+          else
+            go build \
+              -ldflags="-s -w -X main.Version=$VERSION" \
+              -o bin/donezo-${{ matrix.os }}-${{ matrix.arch }} \
+              ./...
+          fi
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: "donezo-${{ matrix.os }}-${{ matrix.arch }}"
