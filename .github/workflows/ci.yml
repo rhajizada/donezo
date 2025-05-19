@@ -80,7 +80,6 @@ jobs:
           if [ "$GOOS" = "windows" ]; then
             OUT="${OUT}.exe"
           fi
-          echo "Building for $GOOS/$GOARCH → $OUT"
           go build -ldflags="-s -w -X main.Version=${VERSION}" -o "${OUT}" .
         shell: bash
 
