@@ -1,4 +1,4 @@
-name: Build
+name: CI
 
 on:
   push:
@@ -36,8 +36,8 @@ jobs:
     needs: lint
     strategy:
       matrix:
-        os: [linux, windows, darwin]
-        arch: [amd64, arm64]
+        os: [linux]
+        arch: [amd64]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,19 +47,19 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
-      - name: Set environment
-        run: |
-          echo "GOOS=${{ matrix.os }}" >> $GITEA_ENV
-          echo "GOARCH=${{ matrix.arch }}" >> $GITEA_ENV
       - name: Build
         run: |
           if [ "${{ matrix.os }}" = "windows" ]; then
-            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo_${{ matrix.os }}_${{ matrix.arch }}.exe
+            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo.exe
           else
-            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo_${{ matrix.os }}_${{ matrix.arch }}
+            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo
           fi
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
-          name: donezo
+          name: donezo-${{ matrix.goos }}-${{ matrix.goarch }}
           path: bin/*

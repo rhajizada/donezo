@@ -21,15 +21,10 @@ jobs:
           version="${{ github.ref_name }}"
           version="${version#v}"
           echo "version=$version" >> $GITEA_ENV
+          echo "CGO_ENABLED=1" >> $GITEA_ENV
       - name: Build (Linux)
         run: |
-          go build -ldflags="-s -w -X 'main.Version=$version'" -o bin/donezo-${version}-linux-amd64
-      - name: Build (Windows)
-        run: |
-          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X 'main.Version=$version'" -o bin/donezo-${version}-windows-amd64.exe
-      - name: Build for Darwin
-        run: |
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w -X 'main.Version=$version'" -o bin/donezo-${version}-darwin-arm64
+          go build -ldflags="-s -w -X 'main.Version=$version'" -o bin/donezo
       - name: Upload
         id: release
         uses: https://gitea.com/actions/release-action@main
