@@ -35,7 +35,7 @@ jobs:
     needs: lint
     strategy:
       matrix:
-        os: [linux, windows, darwin]
+        os: [linux, darwin]
         arch: [amd64, arm64]
     runs-on: ${{ matrix.os == 'darwin' && 'macos-latest' || 'ubuntu-latest' }}
 
@@ -53,27 +53,20 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld libx11-dev mingw-w64
-
-      - name: Configure ARM64-Windows compiler
-        if: matrix.os == 'windows' && matrix.arch == 'arm64'
-        run: |
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
-          echo "CGO_CFLAGS=--target=aarch64-w64-mingw32" >> $GITHUB_ENV
-          echo "CGO_LDFLAGS=-fuse-ld=lld --target=aarch64-w64-mingw32" >> $GITHUB_ENV
+          sudo apt-get install -y \
+            build-essential \
+            libx11-dev
 
       - name: Build
         env:
           CGO_ENABLED: 1
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
         run: |
           mkdir -p bin
           VERSION=$(git rev-parse --short HEAD)
           PKG="."
           OUT="./bin/donezo-${GOOS}-${GOARCH}"
-          if [ "$GOOS" = "windows" ]; then
-            OUT="${OUT}.exe"
-          fi
           go build \
             -ldflags="-s -w -X main.Version=${VERSION}" \
             -o "$OUT" \
@@ -82,5 +75,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "donezo-${{ matrix.os }}-${{ matrix.arch }}"
+          name: donezo-${{ matrix.os }}-${{ matrix.arch }}
           path: bin/*
