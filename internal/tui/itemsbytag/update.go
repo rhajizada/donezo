@@ -11,7 +11,7 @@ import (
 
 const TagsSeparator = ", "
 
-// ListItems fetches items ine the selected board.
+// ListItems fetches items in the selected board.
 func (m *MenuModel) ListItems() tea.Cmd {
 	return func() tea.Msg {
 		parentItem := m.Parent.List.SelectedItem().(tags.Item)
