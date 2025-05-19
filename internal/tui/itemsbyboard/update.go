@@ -2,6 +2,7 @@ package itemsbyboard
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const TagsSeparator = ", "
+const TagsSeparator = ","
 
 // Copy copies selected item to clipboard and moves it to ItemStack
 func (m *MenuModel) Copy() tea.Cmd {
@@ -113,8 +114,25 @@ func (m *MenuModel) UpdateTags() tea.Cmd {
 	return func() tea.Msg {
 		selected := m.List.SelectedItem().(Item)
 		tags := strings.Split(m.Context.Title, TagsSeparator)
-		selected.Itm.Tags = tags
-		item, err := m.Service.UpdateItem(m.ctx, &selected.Itm)
+		emptyTag := false
+		for idx, tag := range tags {
+			sanitized := strings.TrimSpace(tag)
+			if len(sanitized) == 0 {
+				emptyTag = true
+				break
+			} else {
+				tags[idx] = sanitized
+			}
+		}
+
+		var item *service.Item
+		var err error
+		if !emptyTag {
+			selected.Itm.Tags = tags
+			item, err = m.Service.UpdateItem(m.ctx, &selected.Itm)
+		} else {
+			err = errors.New("tag must not be empty")
+		}
 		return UpdateTagsMsg{
 			item,
 			err,
@@ -141,7 +159,8 @@ func (m *MenuModel) InitUpdateTags() tea.Cmd {
 	m.Context.State = UpdateTagsState
 	m.Input.Placeholder = "Enter comma-separated list of tags"
 	selected := m.List.SelectedItem().(Item)
-	m.Input.SetValue(strings.Join(selected.Itm.Tags, TagsSeparator))
+	dSep := fmt.Sprintf(" %s", TagsSeparator)
+	m.Input.SetValue(strings.Join(selected.Itm.Tags, dSep))
 	m.Input.Focus()
 	return nil
 }

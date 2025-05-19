@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -148,6 +149,18 @@ func (s *Service) UpdateItem(ctx context.Context, item *Item) (*Item, error) {
 		Completed:   item.Completed,
 		ID:          item.ID,
 	}
+
+	emptyTags := false
+	for _, tag := range item.Tags {
+		if len(tag) == 0 {
+			emptyTags = true
+			break
+		}
+	}
+	if emptyTags {
+		return nil, errors.New("tag must not be empty")
+	}
+
 	data, err := s.Repo.UpdateItemByID(ctx, params)
 	if err != nil {
 		return nil, err
