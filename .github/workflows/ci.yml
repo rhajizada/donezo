@@ -76,7 +76,7 @@ jobs:
           VERSION: ${{ github.sha }}
         run: |
           mkdir -p bin
-          OUT="bin/donezo-${GOOS}-${GOARCH}"
+          OUT="bin/donezo"
           if [ "$GOOS" = "windows" ]; then
             OUT="${OUT}.exe"
           fi
