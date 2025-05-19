@@ -77,19 +77,17 @@ jobs:
         env:
           CGO_ENABLED: 1
         run: |
-          VERSION=$(git rev-parse --short HEAD)
           mkdir -p bin
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            go build \
-              -ldflags="-s -w -X main.Version=$VERSION" \
-              -o ./bin/donezo-windows-${{ matrix.arch }}.exe \
-              ./...
-          else
-            go build \
-              -ldflags="-s -w -X main.Version=$VERSION" \
-              -o ./bin/donezo-${{ matrix.os }}-${{ matrix.arch }} \
-              ./...
+          VERSION=$(git rev-parse --short HEAD)
+          PKG="."
+          OUT="./bin/donezo-${GOOS}-${GOARCH}"
+          if [ "$GOOS" = "windows" ]; then
+            OUT="${OUT}.exe"
           fi
+          go build \
+            -ldflags="-s -w -X main.Version=${VERSION}" \
+            -o "$OUT" \
+            "$PKG"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
