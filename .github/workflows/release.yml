@@ -10,10 +10,24 @@ permissions:
   contents: write
 
 jobs:
+  env:
+    name: Set version
+    runs-on: [ubuntu-latest]
+    outputs:
+      version: ${{ steps.env.outputs.version }}
+    steps:
+      - name: Set build version
+        id: env
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"
+          echo "version=$version" >> $GITHUB_OUTPUTS
+
   ci:
+    needs: env
     uses: ./.github/workflows/reusable-ci.yml
     with:
-      version: ${{ github.ref_name }}
+      version: ${{ needs.env.outputs.version }}
 
   release:
     needs: build

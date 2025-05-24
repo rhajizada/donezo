@@ -28,9 +28,8 @@ func main() {
 	versionFlag := flag.Bool("version", false, "Print version information and exit")
 	flag.Parse()
 
-	// If the version flag is provided, print version info and exit.
 	if *versionFlag {
-		fmt.Printf("donezo %s\n", Version)
+		fmt.Printf("Version %s\n", Version)
 		os.Exit(0)
 	}
 	err := clipboard.Init()
