@@ -1,0 +1,35 @@
+name: Release
+run-name: Build and release ${{ github.ref_name }}
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    uses: ./github/workflows/reusable-ci.yml
+    with:
+      version: github.ref_name
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}/artifacts
+          merge-multiple: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ github.workspace }}/artifacts/donezo-*
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
