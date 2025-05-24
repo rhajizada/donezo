@@ -13,7 +13,7 @@ jobs:
   ci:
     uses: ./.github/workflows/reusable-ci.yml
     with:
-      version: github.ref_name
+      version: ${{ github.ref_name }}
 
   release:
     needs: build

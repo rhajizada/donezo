@@ -12,4 +12,4 @@ jobs:
   ci:
     uses: ./.github/workflows/reusable-ci.yml
     with:
-      version: github.sha
+      version: ${{ github.sha }}
