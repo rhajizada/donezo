@@ -1,18 +1,16 @@
 package itemsbytag
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/rhajizada/donezo/internal/service"
+	"github.com/rhajizada/donezo/internal/tui/helpers"
 	"github.com/rhajizada/donezo/internal/tui/styles"
 	"github.com/rhajizada/donezo/internal/tui/tags"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
-
-const TagsSeparator = ","
 
 // ListItems fetches items in the selected board.
 func (m *MenuModel) ListItems() tea.Cmd {
@@ -45,27 +43,18 @@ func (m *MenuModel) RenameItem() tea.Cmd {
 // UpdateTags updates item tags
 func (m *MenuModel) UpdateTags() tea.Cmd {
 	return func() tea.Msg {
+		var item *service.Item
 		selected := m.List.SelectedItem().(Item)
-		tags := strings.Split(m.Context.Title, TagsSeparator)
-		emptyTag := false
-		for idx, tag := range tags {
-			sanitized := strings.TrimSpace(tag)
-			if len(sanitized) == 0 {
-				emptyTag = true
-				break
-			} else {
-				tags[idx] = sanitized
+		tags, err := helpers.ExtractTags(m.Context.Title)
+		if err != nil {
+			return UpdateTagsMsg{
+				item,
+				err,
 			}
 		}
 
-		var item *service.Item
-		var err error
-		if !emptyTag {
-			selected.Itm.Tags = tags
-			item, err = m.Service.UpdateItem(m.ctx, &selected.Itm)
-		} else {
-			err = errors.New("tag must not be empty")
-		}
+		selected.Itm.Tags = tags
+		item, err = m.Service.UpdateItem(m.ctx, &selected.Itm)
 		return UpdateTagsMsg{
 			item,
 			err,
@@ -92,7 +81,7 @@ func (m *MenuModel) InitUpdateTags() tea.Cmd {
 	m.Context.State = UpdateTagsState
 	m.Input.Placeholder = "Enter comma-separated list of tags"
 	selected := m.List.SelectedItem().(Item)
-	dSep := fmt.Sprintf(" %s", TagsSeparator)
+	dSep := fmt.Sprintf(" %s", helpers.TagsSeparator)
 	m.Input.SetValue(strings.Join(selected.Itm.Tags, dSep))
 	m.Input.Focus()
 	return nil

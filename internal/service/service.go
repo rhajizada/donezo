@@ -36,6 +36,9 @@ func unmarshalTags(v interface{}) []string {
 	default:
 		return []string{}
 	}
+	if len(tags) == 1 && tags[0] == "" {
+		tags = make([]string, 0)
+	}
 	return tags
 }
 
