@@ -9,7 +9,18 @@ on:
       - "*"
 
 jobs:
+  env:
+    name: Set version
+    runs-on: [ubuntu-latest]
+    outputs:
+      version: ${{ steps.env.outputs.version }}
+    steps:
+      - name: Set build version
+        id: env
+        run: echo "version=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
   ci:
+    needs: env
     uses: ./.github/workflows/reusable-ci.yml
     with:
-      version: ${{ github.sha }}
+      version: ${{ needs.env.outputs.version }}
