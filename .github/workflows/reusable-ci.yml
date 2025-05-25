@@ -24,10 +24,19 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential libx11-dev
 
-      - name: Run golangci-lint
+      - name: Lint with golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
           args: --timeout 5m
+
+      - name: Check code formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            exit 1
+          fi
+
+      - name: Static analysis
+        run: go vet ./...
 
   build:
     name: build

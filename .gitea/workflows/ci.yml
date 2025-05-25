@@ -26,10 +26,19 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - name: Lint with golangci-lint
+        uses: golangci/golangci-lint-action@v8
         with:
           args: --timeout 5m
+
+      - name: Check code formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            exit 1
+          fi
+
+      - name: Static analysis
+        run: go vet ./...
 
   build:
     name: build
@@ -49,11 +58,7 @@ jobs:
           check-latest: true
       - name: Build
         run: |
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo.exe
-          else
-            go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo
-          fi
+          go build -ldflags="-s -w -X main.Version=$(git rev-parse --short HEAD)" -o bin/donezo
         env:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.os }}
