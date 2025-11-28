@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
 // HandleWindowSize processes window size messages.
@@ -111,7 +112,7 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 // HandleKeyInput processes key inputs not handles by list.Model
 func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
-	if !m.List.SettingFilter() {
+	if !m.List.SettingFilter() && m.State == DefaultState {
 		switch {
 		case key.Matches(msg, m.Keys.CreateBoard):
 			cmd = m.InitCreateBoard()
@@ -123,6 +124,14 @@ func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 			cmd = m.ListBoards()
 		case key.Matches(msg, m.Keys.Copy):
 			cmd = m.Copy()
+		case key.Matches(msg, m.Keys.ListTags):
+			cmd = func() tea.Msg {
+				return navigation.SwitchMainViewMsg{View: navigation.ViewTags}
+			}
+		case key.Matches(msg, m.Keys.Choose):
+			cmd = func() tea.Msg {
+				return navigation.OpenBoardItemsMsg{}
+			}
 		}
 	}
 	return cmd

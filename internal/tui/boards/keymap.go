@@ -20,8 +20,8 @@ type Keymap struct {
 func NewKeymap() Keymap {
 	return Keymap{
 		Choose: key.NewBinding(
-			key.WithKeys("return"),
-			key.WithHelp("return", "choose board"),
+			key.WithKeys("enter", "return"),
+			key.WithHelp("enter", "open board"),
 		),
 		ListTags: key.NewBinding(
 			key.WithKeys("tab"),

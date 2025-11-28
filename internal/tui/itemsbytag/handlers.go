@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
 // HandleWindowSize processes window size messages.
@@ -162,7 +163,11 @@ func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.Keys.RefreshList):
 		cmd = m.ListItems()
 	case key.Matches(msg, m.Keys.Back):
-		cmd = nil
+		cmd = func() tea.Msg { return navigation.BackMsg{} }
+	case key.Matches(msg, m.Keys.NextBoard):
+		cmd = func() tea.Msg { return navigation.TagDeltaMsg{Delta: 1} }
+	case key.Matches(msg, m.Keys.PreviousBoard):
+		cmd = func() tea.Msg { return navigation.TagDeltaMsg{Delta: -1} }
 	}
 	return cmd
 }
