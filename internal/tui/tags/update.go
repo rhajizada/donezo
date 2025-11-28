@@ -94,6 +94,10 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
+	if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.Type == tea.KeyEsc {
+		return m, tea.Batch(cmds...)
+	}
+
 	listModel, listCmd := m.List.Update(msg)
 	m.List = listModel
 	cmds = append(cmds, listCmd)
