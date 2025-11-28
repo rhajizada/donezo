@@ -1,6 +1,7 @@
 package tags
 
 import (
+	"errors"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -8,6 +9,11 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/styles"
 	"golang.design/x/clipboard"
 )
+
+func (m *MenuModel) selectedItem() (Item, bool) {
+	item, ok := m.List.SelectedItem().(Item)
+	return item, ok
+}
 
 // ListTags fetches the list of tags from the client.
 func (m *MenuModel) ListTags() tea.Cmd {
@@ -27,9 +33,13 @@ func (m *MenuModel) ListTags() tea.Cmd {
 	}
 }
 
-// Copy copies tag to system clipboard
+// Copy copies tag to system clipboard.
 func (m *MenuModel) Copy() tea.Cmd {
-	currentTag := m.List.SelectedItem().(Item).Tag
+	current, ok := m.selectedItem()
+	if !ok {
+		return m.List.NewStatusMessage(styles.ErrorMessage.Render("no tag selected"))
+	}
+	currentTag := current.Tag
 
 	items, err := m.Client.ListItemsByTag(m.ctx, currentTag)
 	if err != nil {
@@ -46,10 +56,13 @@ func (m *MenuModel) Copy() tea.Cmd {
 	)
 }
 
-// DeleteTag deletes current selected tag
+// DeleteTag deletes current selected tag.
 func (m *MenuModel) DeleteTag() tea.Cmd {
 	return func() tea.Msg {
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return DeleteTagMsg{Error: errors.New("no tag selected")}
+		}
 		err := m.Client.DeleteTag(m.ctx, selected.Tag)
 		return DeleteTagMsg{Error: err, Tag: selected.Tag}
 	}
@@ -79,7 +92,6 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 		cmd = m.ListTags()
 		cmds = append(cmds, cmd)
-
 	}
 
 	listModel, listCmd := m.List.Update(msg)

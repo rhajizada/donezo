@@ -21,6 +21,10 @@ func (m AppModel) switchMain(view navigation.View) (tea.Model, tea.Cmd) {
 	case navigation.ViewTags:
 		m.active = navigation.ViewTags
 		return m, m.initWithSize(m.tags.Init())
+	case navigation.ViewItemsByBoard:
+		return m.openBoardItems()
+	case navigation.ViewItemsByTag:
+		return m.openTagItems()
 	default:
 		return m, nil
 	}
@@ -60,6 +64,8 @@ func (m AppModel) navigateBack() (tea.Model, tea.Cmd) {
 	case navigation.ViewItemsByTag:
 		m.active = navigation.ViewTags
 		return m, m.forwardCachedSize()
+	case navigation.ViewBoards, navigation.ViewTags:
+		return m, nil
 	default:
 		return m, nil
 	}

@@ -10,5 +10,6 @@ type Board struct {
 
 type Item struct {
 	repository.Item
-	Tags []string
+
+	Tags []string `json:"tags"`
 }

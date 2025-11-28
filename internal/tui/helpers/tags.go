@@ -18,9 +18,9 @@ func ExtractTags(input string) ([]string, error) {
 		sanitized := strings.TrimSpace(tag)
 		if len(sanitized) == 0 {
 			return nil, errors.New("tag must not be empty string")
-		} else {
-			tags[idx] = sanitized
 		}
+
+		tags[idx] = sanitized
 	}
 
 	return tags, nil

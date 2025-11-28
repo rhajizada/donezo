@@ -10,6 +10,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
 
+//nolint:recvcheck // Mixed receivers align with tea.Model usage patterns.
 type MenuModel struct {
 	ctx     context.Context
 	Parent  *boards.MenuModel
@@ -31,7 +32,10 @@ func New(ctx context.Context, service *service.Service, parent *boards.MenuModel
 		0,
 		0,
 	)
-	parentItem := parent.List.SelectedItem().(boards.Item)
+	parentItem, ok := parent.List.SelectedItem().(boards.Item)
+	if !ok {
+		parentItem = boards.Item{}
+	}
 	input := textinput.New()
 	keymap := NewKeymap()
 	inputContext := NewInputContext()

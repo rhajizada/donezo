@@ -7,7 +7,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
 
-// Item represents item in the list
+// Item represents item in the list.
 type Item struct {
 	Itm service.Item
 }

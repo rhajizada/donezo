@@ -1,4 +1,4 @@
-// Package list provides a feature-rich Bubble Tea component for browsing
+// Package itemlist provides a feature-rich Bubble Tea component for browsing
 // a general purpose list of items. It features optional filtering, pagination,
 // help, status messages, and a spinner to indicate activity.
 package itemlist
@@ -140,6 +140,8 @@ func (f FilterState) String() string {
 }
 
 // Model contains the state of this component.
+//
+//nolint:recvcheck // Mixed receivers align with tea.Model usage patterns.
 type Model struct {
 	showTitle        bool
 	showFilter       bool
@@ -253,7 +255,9 @@ func New(items []Item, delegate ItemDelegate, width, height int) Model {
 // NewModel returns a new model with sensible defaults.
 //
 // Deprecated: use [New] instead.
-var NewModel = New
+func NewModel(items []Item, delegate ItemDelegate, width, height int) Model {
+	return New(items, delegate, width, height)
+}
 
 // SetFilteringEnabled enables or disables filtering. Note that this is different
 // from ShowFilter, which merely hides or shows the input view.
@@ -294,7 +298,7 @@ func (m *Model) SetFilterText(filter string) {
 	m.updateKeybindings()
 }
 
-// Helper method for setting the filtering state manually.
+// SetFilterState sets the filtering state manually.
 func (m *Model) SetFilterState(state FilterState) {
 	m.Paginator.Page = 0
 	m.cursor = 0
@@ -752,7 +756,7 @@ func (m Model) itemsAsFilterItems() filteredItems {
 
 // Set keybindings according to the filter state.
 func (m *Model) updateKeybindings() {
-	switch m.filterState { //nolint:exhaustive
+	switch m.filterState { //nolint:exhaustive // Unfiltered handled in default branch
 	case Filtering:
 		m.KeyMap.CursorUp.SetEnabled(false)
 		m.KeyMap.CursorDown.SetEnabled(false)
@@ -879,38 +883,37 @@ func (m *Model) handleBrowsing(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	numItems := len(m.VisibleItems())
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		switch {
 		// Note: we match clear filter before quit because, by default, they're
 		// both mapped to escape.
-		case key.Matches(msg, m.KeyMap.ClearFilter):
+		case key.Matches(keyMsg, m.KeyMap.ClearFilter):
 			m.resetFiltering()
 
-		case key.Matches(msg, m.KeyMap.Quit):
+		case key.Matches(keyMsg, m.KeyMap.Quit):
 			return tea.Quit
 
-		case key.Matches(msg, m.KeyMap.CursorUp):
+		case key.Matches(keyMsg, m.KeyMap.CursorUp):
 			m.CursorUp()
 
-		case key.Matches(msg, m.KeyMap.CursorDown):
+		case key.Matches(keyMsg, m.KeyMap.CursorDown):
 			m.CursorDown()
 
-		case key.Matches(msg, m.KeyMap.PrevPage):
+		case key.Matches(keyMsg, m.KeyMap.PrevPage):
 			m.Paginator.PrevPage()
 
-		case key.Matches(msg, m.KeyMap.NextPage):
+		case key.Matches(keyMsg, m.KeyMap.NextPage):
 			m.Paginator.NextPage()
 
-		case key.Matches(msg, m.KeyMap.GoToStart):
+		case key.Matches(keyMsg, m.KeyMap.GoToStart):
 			m.Paginator.Page = 0
 			m.cursor = 0
 
-		case key.Matches(msg, m.KeyMap.GoToEnd):
+		case key.Matches(keyMsg, m.KeyMap.GoToEnd):
 			m.Paginator.Page = m.Paginator.TotalPages - 1
 			m.cursor = m.Paginator.ItemsOnPage(numItems) - 1
 
-		case key.Matches(msg, m.KeyMap.Filter):
+		case key.Matches(keyMsg, m.KeyMap.Filter):
 			m.hideStatusMessage()
 			if m.FilterInput.Value() == "" {
 				// Populate filter with all items only if the filter is empty.
@@ -923,11 +926,11 @@ func (m *Model) handleBrowsing(msg tea.Msg) tea.Cmd {
 			m.FilterInput.Focus()
 			m.updateKeybindings()
 			return textinput.Blink
-		case key.Matches(msg, m.KeyMap.ToggleHide):
+		case key.Matches(keyMsg, m.KeyMap.ToggleHide):
 			m.ToggleHide()
-		case key.Matches(msg, m.KeyMap.ShowFullHelp):
+		case key.Matches(keyMsg, m.KeyMap.ShowFullHelp):
 			fallthrough
-		case key.Matches(msg, m.KeyMap.CloseFullHelp):
+		case key.Matches(keyMsg, m.KeyMap.CloseFullHelp):
 			m.Help.ShowAll = !m.Help.ShowAll
 			m.updatePagination()
 		}
@@ -1199,23 +1202,24 @@ func (m Model) statusView() string {
 
 	itemsDisplay := fmt.Sprintf("%d %s", visibleItems, itemName)
 
-	if m.filterState == Filtering { //nolint:nestif
+	switch {
+	case m.filterState == Filtering:
 		// Filter results
 		if visibleItems == 0 {
 			status = m.Styles.StatusEmpty.Render("Nothing matched")
 		} else {
 			status = itemsDisplay
 		}
-	} else if len(m.items) == 0 {
+	case len(m.items) == 0:
 		// Not filtering: no items.
 		status = m.Styles.StatusEmpty.Render("No " + m.itemNamePlural)
-	} else {
+	default:
 		// Normal
 		filtered := m.FilterState() == FilterApplied
 
 		if filtered {
 			f := strings.TrimSpace(m.FilterInput.Value())
-			f = ansi.Truncate(f, 10, "…") //nolint:mnd
+			f = ansi.Truncate(f, 10, "…") //nolint:mnd // truncate filter preview to keep status compact
 			status += fmt.Sprintf("“%s” ", f)
 		}
 
@@ -1232,7 +1236,7 @@ func (m Model) statusView() string {
 }
 
 func (m Model) paginationView() string {
-	if m.Paginator.TotalPages < 2 { //nolint:mnd
+	if m.Paginator.TotalPages < 2 { //nolint:mnd // 2 pages is the smallest meaningful pagination threshold
 		return ""
 	}
 
@@ -1362,7 +1366,8 @@ func removeFilterMatchFromSlice(i []filteredItem, index int) []filteredItem {
 	return i[:len(i)-1]
 }
 
-func countEnabledBindings(groups [][]key.Binding) (agg int) {
+func countEnabledBindings(groups [][]key.Binding) int {
+	agg := 0
 	for _, group := range groups {
 		for _, kb := range group {
 			if kb.Enabled() {
@@ -1371,11 +1376,4 @@ func countEnabledBindings(groups [][]key.Binding) (agg int) {
 		}
 	}
 	return agg
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

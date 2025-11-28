@@ -1,6 +1,7 @@
 package boards
 
 import (
+	"errors"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -8,6 +9,11 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/styles"
 	"golang.design/x/clipboard"
 )
+
+func (m *MenuModel) selectedItem() (Item, bool) {
+	item, ok := m.List.SelectedItem().(Item)
+	return item, ok
+}
 
 // ListBoards fetches the list of boards from the client.
 func (m *MenuModel) ListBoards() tea.Cmd {
@@ -22,9 +28,13 @@ func (m *MenuModel) ListBoards() tea.Cmd {
 	}
 }
 
-// Copy copies board name to system clipboard
+// Copy copies board name to system clipboard.
 func (m *MenuModel) Copy() tea.Cmd {
-	currentBoard := m.List.SelectedItem().(Item).Board
+	selected, ok := m.selectedItem()
+	if !ok {
+		return nil
+	}
+	currentBoard := selected.Board
 	items, err := m.Client.ListItemsByBoard(m.ctx, &currentBoard)
 	if err != nil {
 		return func() tea.Msg {
@@ -40,7 +50,7 @@ func (m *MenuModel) Copy() tea.Cmd {
 	)
 }
 
-// CreateBoard creates a new board
+// CreateBoard creates a new board.
 func (m *MenuModel) CreateBoard() tea.Cmd {
 	return func() tea.Msg {
 		board, err := m.Client.CreateBoard(m.ctx, m.Input.Value())
@@ -51,10 +61,13 @@ func (m *MenuModel) CreateBoard() tea.Cmd {
 	}
 }
 
-// RenameBoard renames selected board
+// RenameBoard renames selected board.
 func (m *MenuModel) RenameBoard() tea.Cmd {
 	return func() tea.Msg {
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return ErrorMsg{errors.New("no board selected")}
+		}
 		selected.Board.Name = m.Input.Value()
 		board, err := m.Client.UpdateBoard(m.ctx, &selected.Board)
 		return RenameBoardMsg{
@@ -64,7 +77,7 @@ func (m *MenuModel) RenameBoard() tea.Cmd {
 	}
 }
 
-// InitCreateBoard sets list state to CreateBoardState to render text input
+// InitCreateBoard sets list state to CreateBoardState to render text input.
 func (m *MenuModel) InitCreateBoard() tea.Cmd {
 	m.State = CreateBoardState
 	m.Input.Placeholder = "Enter board name"
@@ -73,20 +86,25 @@ func (m *MenuModel) InitCreateBoard() tea.Cmd {
 	return nil
 }
 
-// DeleteBoard deletes current selected board
+// DeleteBoard deletes current selected board.
 func (m *MenuModel) DeleteBoard() tea.Cmd {
 	return func() tea.Msg {
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return DeleteBoardMsg{Error: errors.New("no board selected")}
+		}
 		err := m.Client.DeleteBoard(m.ctx, &selected.Board)
 		return DeleteBoardMsg{Error: err, Board: &selected.Board}
 	}
 }
 
-// InitRenameBoard sets list state to InitRenameBoard to render text input
+// InitRenameBoard sets list state to InitRenameBoard to render text input.
 func (m *MenuModel) InitRenameBoard() tea.Cmd {
 	m.State = RenameBoardState
-	selected := m.List.SelectedItem().(Item)
-	m.Input.SetValue(selected.Board.Name)
+	selected, ok := m.selectedItem()
+	if ok {
+		m.Input.SetValue(selected.Board.Name)
+	}
 	m.Input.Focus()
 	return nil
 }
@@ -128,7 +146,6 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case RenameBoardMsg:
 		cmd := m.HandleRenameBoard(msg)
 		cmds = append(cmds, cmd)
-
 	}
 
 	listModel, listCmd := m.List.Update(msg)

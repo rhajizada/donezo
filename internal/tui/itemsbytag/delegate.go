@@ -11,7 +11,6 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
 
-// Define custom styles
 // ListDelegate is a fully custom delegate that replicates the default behavior
 // but adds a strikethrough to completed items and applies padding.
 type ListDelegate struct {
@@ -88,5 +87,5 @@ func (d *ListDelegate) Render(w io.Writer, m itemlist.Model, index int, item ite
 	combined = styles.Item.Render(combined)
 
 	// Write to the writer
-	fmt.Fprint(w, combined) //nolint: errcheck
+	fmt.Fprint(w, combined)
 }

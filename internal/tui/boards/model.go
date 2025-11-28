@@ -9,6 +9,7 @@ import (
 	"github.com/rhajizada/donezo/internal/service"
 )
 
+//nolint:recvcheck // Bubble Tea models intentionally mix value/pointer receivers for tea.Model interface.
 type MenuModel struct {
 	ctx    context.Context
 	List   list.Model

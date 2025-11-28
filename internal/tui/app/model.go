@@ -13,6 +13,8 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/tags"
 )
 
+//revive:disable-next-line:exported // app.AppModel is the public entry point for the TUI.
+//nolint:recvcheck // Mixed receivers align with tea.Model usage patterns.
 type AppModel struct {
 	ctx     context.Context
 	service *service.Service

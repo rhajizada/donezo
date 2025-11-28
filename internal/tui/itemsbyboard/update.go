@@ -2,6 +2,7 @@ package itemsbyboard
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,10 +15,28 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Copy copies selected item to clipboard and moves it to ItemStack
+func (m *MenuModel) selectedItem() (Item, bool) {
+	item, ok := m.List.SelectedItem().(Item)
+	return item, ok
+}
+
+func (m *MenuModel) selectedBoard() (boards.Item, bool) {
+	if m.Parent == nil {
+		return boards.Item{}, false
+	}
+
+	item, ok := m.Parent.List.SelectedItem().(boards.Item)
+	return item, ok
+}
+
+// Copy copies selected item to clipboard and moves it to ItemStack.
 func (m *MenuModel) Copy() tea.Cmd {
-	selectedItem := m.List.SelectedItem().(Item).Itm
-	data, err := json.Marshal(selectedItem)
+	selected, ok := m.selectedItem()
+	if !ok {
+		return m.List.NewStatusMessage(styles.ErrorMessage.Render("no item selected"))
+	}
+
+	data, err := json.Marshal(selected.Itm)
 	if err != nil {
 		return func() tea.Msg {
 			return ErrorMsg{err}
@@ -27,13 +46,18 @@ func (m *MenuModel) Copy() tea.Cmd {
 	clipboard.Write(clipboard.FmtText, data)
 	return m.List.NewStatusMessage(
 		styles.StatusMessage.Render(
-			fmt.Sprintf("copied \"%s\" to system clipboard", selectedItem.Title),
+			fmt.Sprintf("copied \"%s\" to system clipboard", selected.Itm.Title),
 		),
 	)
 }
 
-// Paste pastes item into current board
+// Paste pastes item into current board.
 func (m *MenuModel) Paste() tea.Cmd {
+	currentBoard, ok := m.selectedBoard()
+	if !ok {
+		return m.List.NewStatusMessage(styles.ErrorMessage.Render("no board selected"))
+	}
+
 	data := clipboard.Read(clipboard.FmtText)
 	var lastItem service.Item
 	err := json.Unmarshal(data, &lastItem)
@@ -44,8 +68,8 @@ func (m *MenuModel) Paste() tea.Cmd {
 			),
 		)
 	}
-	currentBoard := m.Parent.List.SelectedItem().(boards.Item).Board
-	item, err := m.Service.CreateItem(m.ctx, &currentBoard, lastItem.Title, lastItem.Description)
+
+	item, err := m.Service.CreateItem(m.ctx, &currentBoard.Board, lastItem.Title, lastItem.Description)
 	if err != nil {
 		return func() tea.Msg {
 			return ErrorMsg{err}
@@ -59,10 +83,14 @@ func (m *MenuModel) Paste() tea.Cmd {
 	}
 }
 
-// ListItems fetches items ine the selected board.
+// ListItems fetches items in the selected board.
 func (m *MenuModel) ListItems() tea.Cmd {
 	return func() tea.Msg {
-		parentItem := m.Parent.List.SelectedItem().(boards.Item)
+		parentItem, ok := m.selectedBoard()
+		if !ok {
+			return ErrorMsg{errors.New("no board selected")}
+		}
+
 		items, err := m.Service.ListItemsByBoard(m.ctx, &parentItem.Board)
 		if err != nil {
 			return ErrorMsg{err}
@@ -73,10 +101,17 @@ func (m *MenuModel) ListItems() tea.Cmd {
 	}
 }
 
-// CreateItem creates a new item
+// CreateItem creates a new item.
 func (m *MenuModel) CreateItem() tea.Cmd {
 	return func() tea.Msg {
-		parentItem := m.Parent.List.SelectedItem().(boards.Item)
+		parentItem, ok := m.selectedBoard()
+		if !ok {
+			return CreateItemMsg{
+				Item:  nil,
+				Error: errors.New("no board selected"),
+			}
+		}
+
 		item, err := m.Service.CreateItem(m.ctx, &parentItem.Board, m.Context.Title, m.Context.Desc)
 		return CreateItemMsg{
 			item,
@@ -93,10 +128,14 @@ func (m *MenuModel) InitCreateItem() tea.Cmd {
 	return nil
 }
 
-// RenameItem renames selected item
+// RenameItem renames selected item.
 func (m *MenuModel) RenameItem() tea.Cmd {
 	return func() tea.Msg {
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return RenameItemMsg{Error: errors.New("no item selected")}
+		}
+
 		selected.Itm.Title = m.Context.Title
 		selected.Itm.Description = m.Context.Desc
 		item, err := m.Service.UpdateItem(m.ctx, &selected.Itm)
@@ -107,11 +146,14 @@ func (m *MenuModel) RenameItem() tea.Cmd {
 	}
 }
 
-// UpdateTags updates item tags
+// UpdateTags updates item tags.
 func (m *MenuModel) UpdateTags() tea.Cmd {
 	return func() tea.Msg {
 		var item *service.Item
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return UpdateTagsMsg{Item: nil, Error: errors.New("no item selected")}
+		}
 		tags, err := helpers.ExtractTags(m.Context.Title)
 		if err != nil {
 			return UpdateTagsMsg{
@@ -129,7 +171,7 @@ func (m *MenuModel) UpdateTags() tea.Cmd {
 	}
 }
 
-// initiateRename starts the renaming process for the selected item.
+// InitRenameItem starts the renaming process for the selected item.
 func (m *MenuModel) InitRenameItem() tea.Cmd {
 	if len(m.List.Items()) == 0 {
 		return m.List.NewStatusMessage(
@@ -137,30 +179,40 @@ func (m *MenuModel) InitRenameItem() tea.Cmd {
 	}
 
 	m.Context.State = RenameItemNameState
-	selected := m.List.SelectedItem().(Item)
-	m.Input.SetValue(selected.Itm.Title)
+	selected, ok := m.selectedItem()
+	if ok {
+		m.Input.SetValue(selected.Itm.Title)
+	}
 	m.Input.Focus()
 	return nil
 }
 
-// InitUpdateTags initiaizes tag updates
+// InitUpdateTags initializes tag updates.
 func (m *MenuModel) InitUpdateTags() tea.Cmd {
 	m.Context.State = UpdateTagsState
 	m.Input.Placeholder = "Enter comma-separated list of tags"
-	selected := m.List.SelectedItem().(Item)
-	dSep := fmt.Sprintf(" %s", helpers.TagsSeparator)
-	m.Input.SetValue(strings.Join(selected.Itm.Tags, dSep))
+	selected, ok := m.selectedItem()
+	if ok {
+		dSep := fmt.Sprintf(" %s", helpers.TagsSeparator)
+		m.Input.SetValue(strings.Join(selected.Itm.Tags, dSep))
+	}
 	m.Input.Focus()
 	return nil
 }
 
-// DeleteBoard deletes current selected board
+// DeleteItem deletes current selected item.
 func (m *MenuModel) DeleteItem() tea.Cmd {
 	m.Copy()
-	selectedItem := m.List.SelectedItem().(Item).Itm
-	err := m.Service.DeleteItem(m.ctx, &selectedItem)
+	selected, ok := m.selectedItem()
+	if !ok {
+		return func() tea.Msg {
+			return DeleteItemMsg{Error: errors.New("no item selected")}
+		}
+	}
+
+	err := m.Service.DeleteItem(m.ctx, &selected.Itm)
 	return func() tea.Msg {
-		return DeleteItemMsg{Error: err, Item: &selectedItem}
+		return DeleteItemMsg{Error: err, Item: &selected.Itm}
 	}
 }
 
@@ -170,7 +222,10 @@ func (m MenuModel) ToggleComplete() tea.Cmd {
 			styles.ErrorMessage.Render("no item selected"))
 	}
 
-	selected := m.List.SelectedItem().(Item)
+	selected, ok := m.selectedItem()
+	if !ok {
+		return m.List.NewStatusMessage(styles.ErrorMessage.Render("no item selected"))
+	}
 	selected.Itm.Completed = !selected.Itm.Completed
 	m.List.SetItem(m.List.Index(), selected)
 

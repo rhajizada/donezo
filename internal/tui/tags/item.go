@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 )
 
-// Item represents item in the list
+// Item represents item in the list.
 type Item struct {
 	Tag   string
 	Count int64

@@ -11,6 +11,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+const defaultLeftPadding = 2
+
 // DefaultItemStyles defines styling for a default list item.
 // See DefaultItemView for when these come into play.
 type DefaultItemStyles struct {
@@ -32,33 +34,35 @@ type DefaultItemStyles struct {
 
 // NewDefaultItemStyles returns style definitions for a default item. See
 // DefaultItemView for when these come into play.
-func NewDefaultItemStyles() (s DefaultItemStyles) {
-	s.NormalTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#dddddd"}).
-		Padding(0, 0, 0, 2) //nolint:mnd
+func NewDefaultItemStyles() DefaultItemStyles {
+	styles := DefaultItemStyles{}
 
-	s.NormalDesc = s.NormalTitle.
+	styles.NormalTitle = lipgloss.NewStyle().
+		Foreground(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#dddddd"}).
+		Padding(0, 0, 0, defaultLeftPadding)
+
+	styles.NormalDesc = styles.NormalTitle.
 		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"})
 
-	s.SelectedTitle = lipgloss.NewStyle().
+	styles.SelectedTitle = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, false, true).
 		BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
 		Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"}).
 		Padding(0, 0, 0, 1)
 
-	s.SelectedDesc = s.SelectedTitle.
+	styles.SelectedDesc = styles.SelectedTitle.
 		Foreground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"})
 
-	s.DimmedTitle = lipgloss.NewStyle().
+	styles.DimmedTitle = lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"}).
-		Padding(0, 0, 0, 2) //nolint:mnd
+		Padding(0, 0, 0, defaultLeftPadding)
 
-	s.DimmedDesc = s.DimmedTitle.
+	styles.DimmedDesc = styles.DimmedTitle.
 		Foreground(lipgloss.AdaptiveColor{Light: "#C2B8C2", Dark: "#4D4D4D"})
 
-	s.FilterMatch = lipgloss.NewStyle().Underline(true)
+	styles.FilterMatch = lipgloss.NewStyle().Underline(true)
 
-	return s
+	return styles
 }
 
 // DefaultItem describes an item designed to work with DefaultDelegate.
@@ -82,6 +86,8 @@ type DefaultItem interface {
 //
 // Settings ShortHelpFunc and FullHelpFunc is optional. They can be set to
 // include items in the list's default short and full help menus.
+//
+//nolint:recvcheck // Mixed receivers required for interface satisfaction and ergonomics.
 type DefaultDelegate struct {
 	ShowDescription bool
 	Styles          DefaultItemStyles
@@ -138,6 +144,8 @@ func (d DefaultDelegate) Update(msg tea.Msg, m *Model) tea.Cmd {
 }
 
 // Render prints an item.
+//
+//nolint:gocognit,gocritic // Rendering needs multiple branches for styling states; complexity unavoidable in view logic.
 func (d DefaultDelegate) Render(w io.Writer, m Model, index int, item Item) {
 	var (
 		title, desc  string
@@ -183,10 +191,11 @@ func (d DefaultDelegate) Render(w io.Writer, m Model, index int, item Item) {
 		matchedRunes = m.MatchesForItem(index)
 	}
 
-	if emptyFilter {
+	switch {
+	case emptyFilter:
 		title = s.DimmedTitle.Render(title)
 		desc = s.DimmedDesc.Render(desc)
-	} else if isSelected && m.FilterState() != Filtering {
+	case isSelected && m.FilterState() != Filtering:
 		if isFiltered {
 			// Highlight matches
 			unmatched := s.SelectedTitle.Inline(true)
@@ -195,7 +204,7 @@ func (d DefaultDelegate) Render(w io.Writer, m Model, index int, item Item) {
 		}
 		title = s.SelectedTitle.Render(title)
 		desc = s.SelectedDesc.Render(desc)
-	} else {
+	default:
 		if isFiltered {
 			// Highlight matches
 			unmatched := s.NormalTitle.Inline(true)
@@ -207,10 +216,10 @@ func (d DefaultDelegate) Render(w io.Writer, m Model, index int, item Item) {
 	}
 
 	if d.ShowDescription {
-		fmt.Fprintf(w, "%s\n%s", title, desc) //nolint: errcheck
+		fmt.Fprintf(w, "%s\n%s", title, desc)
 		return
 	}
-	fmt.Fprintf(w, "%s", title) //nolint: errcheck
+	fmt.Fprintf(w, "%s", title)
 }
 
 // ShortHelp returns the delegate's short help.
