@@ -21,7 +21,7 @@ func NewKeymap() Keymap {
 	return Keymap{
 		Choose: key.NewBinding(
 			key.WithKeys("enter", "return"),
-			key.WithHelp("enter", "open board"),
+			key.WithHelp("enter", "choose board"),
 		),
 		ListTags: key.NewBinding(
 			key.WithKeys("tab"),
@@ -41,7 +41,7 @@ func NewKeymap() Keymap {
 			key.WithHelp("R", "refresh list"),
 		),
 		Copy: key.NewBinding(key.WithKeys("y"),
-			key.WithHelp("y", "copy name to system clipboard"),
+			key.WithHelp("y", "copy board to system clipboard"),
 		),
 	}
 }

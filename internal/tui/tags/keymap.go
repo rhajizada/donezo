@@ -17,7 +17,7 @@ func NewKeymap() Keymap {
 	return Keymap{
 		Choose: key.NewBinding(
 			key.WithKeys("enter", "return"),
-			key.WithHelp("enter", "open tag"),
+			key.WithHelp("enter", "choose tag"),
 		),
 		ListBoards: key.NewBinding(
 			key.WithKeys("tab"),
