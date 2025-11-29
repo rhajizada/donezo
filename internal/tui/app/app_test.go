@@ -97,7 +97,8 @@ func TestTagsEscDoesNotQuit(t *testing.T) {
 		t.Fatalf("CreateItem: %v", err)
 	}
 	item.Tags = []string{"inbox"}
-	if _, err := svc.UpdateItem(testutil.MustContext(), item); err != nil {
+	_, err = svc.UpdateItem(testutil.MustContext(), item)
+	if err != nil {
 		t.Fatalf("UpdateItem (add tag): %v", err)
 	}
 
@@ -136,7 +137,8 @@ func TestBoardsTabSwitchesToTags(t *testing.T) {
 		t.Fatalf("CreateItem: %v", err)
 	}
 	item.Tags = []string{"work"}
-	if _, err := svc.UpdateItem(ctx, item); err != nil {
+	_, err = svc.UpdateItem(ctx, item)
+	if err != nil {
 		t.Fatalf("UpdateItem: %v", err)
 	}
 
@@ -215,7 +217,11 @@ func TestItemsByBoardTabAndShiftTabCycleBoards(t *testing.T) {
 		t.Fatalf("expected board index 0, got %d", appModel.boards.List.Index())
 	}
 	if appModel.itemsByBoard.List.Title != board1.Name {
-		t.Fatalf("expected items view for board %s after reverse, got %s", board1.Name, appModel.itemsByBoard.List.Title)
+		t.Fatalf(
+			"expected items view for board %s after reverse, got %s",
+			board1.Name,
+			appModel.itemsByBoard.List.Title,
+		)
 	}
 }
 
@@ -230,7 +236,8 @@ func TestItemsByTagNextAndPrevious(t *testing.T) {
 		t.Fatalf("CreateItem a: %v", err)
 	}
 	itemA.Tags = []string{"alpha"}
-	if _, err := svc.UpdateItem(ctx, itemA); err != nil {
+	_, err = svc.UpdateItem(ctx, itemA)
+	if err != nil {
 		t.Fatalf("UpdateItem a: %v", err)
 	}
 	itemB, err := svc.CreateItem(ctx, board, "b", "")
@@ -238,7 +245,8 @@ func TestItemsByTagNextAndPrevious(t *testing.T) {
 		t.Fatalf("CreateItem b: %v", err)
 	}
 	itemB.Tags = []string{"beta"}
-	if _, err := svc.UpdateItem(ctx, itemB); err != nil {
+	_, err = svc.UpdateItem(ctx, itemB)
+	if err != nil {
 		t.Fatalf("UpdateItem b: %v", err)
 	}
 

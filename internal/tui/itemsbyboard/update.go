@@ -16,9 +16,11 @@ import (
 )
 
 var (
+	//nolint:gochecknoglobals // injectable for tests
 	writeClipboardText = func(data []byte) {
 		clipboard.Write(clipboard.FmtText, data)
 	}
+	//nolint:gochecknoglobals // injectable for tests
 	readClipboardText = func() []byte {
 		return clipboard.Read(clipboard.FmtText)
 	}

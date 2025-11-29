@@ -28,7 +28,8 @@ func TestCopyBoardWritesMarkdown(t *testing.T) {
 		t.Fatalf("CreateItem done: %v", err)
 	}
 	item2.Completed = true
-	if _, err := svc.UpdateItem(ctx, item2); err != nil {
+	_, err = svc.UpdateItem(ctx, item2)
+	if err != nil {
 		t.Fatalf("UpdateItem: %v", err)
 	}
 

@@ -1,8 +1,10 @@
 package service_test
 
 import (
+	"context"
 	"testing"
 
+	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
 )
 
@@ -12,122 +14,177 @@ func TestBoardLifecycle(t *testing.T) {
 
 	ctx := testutil.MustContext()
 
-	board, err := svc.CreateBoard(ctx, "Inbox")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
-	}
-	if board.ID == 0 {
-		t.Fatalf("expected board ID to be set")
-	}
+	board := mustCreateBoard(ctx, t, svc, "Inbox")
+	requirePositiveID(t, board.ID)
 
-	boards, err := svc.ListBoards(ctx)
-	if err != nil {
-		t.Fatalf("ListBoards: %v", err)
-	}
-	if len(*boards) != 1 || (*boards)[0].Name != "Inbox" {
-		t.Fatalf("unexpected boards: %+v", boards)
-	}
+	boards := mustListBoards(ctx, t, svc)
+	assertBoardNames(t, boards, []string{"Inbox"})
 
 	board.Name = "Updated"
-	updated, err := svc.UpdateBoard(ctx, board)
-	if err != nil {
-		t.Fatalf("UpdateBoard: %v", err)
-	}
-	if updated.Name != "Updated" {
-		t.Fatalf("expected updated board name, got %s", updated.Name)
-	}
+	updated := mustUpdateBoard(ctx, t, svc, board)
+	requireEqualString(t, updated.Name, "Updated", "updated board name")
 
-	if err := svc.DeleteBoard(ctx, updated); err != nil {
-		t.Fatalf("DeleteBoard: %v", err)
-	}
+	mustDeleteBoard(ctx, t, svc, updated)
 
-	afterDelete, err := svc.ListBoards(ctx)
-	if err != nil {
-		t.Fatalf("ListBoards after delete: %v", err)
-	}
-	if len(*afterDelete) != 0 {
-		t.Fatalf("expected no boards after delete, got %d", len(*afterDelete))
-	}
+	afterDelete := mustListBoards(ctx, t, svc)
+	assertBoardNames(t, afterDelete, []string{})
 }
 
-func TestItemAndTagLifecycle(t *testing.T) {
+func TestItemLifecycle(t *testing.T) {
 	svc, cleanup := testutil.NewTestService(t)
 	defer cleanup()
 
 	ctx := testutil.MustContext()
-	board, err := svc.CreateBoard(ctx, "Projects")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
-	}
+	board := mustCreateBoard(ctx, t, svc, "Projects")
 
-	item, err := svc.CreateItem(ctx, board, "task", "desc")
-	if err != nil {
-		t.Fatalf("CreateItem: %v", err)
-	}
+	item := mustCreateItem(ctx, t, svc, board, "task", "desc")
+	itemsByBoard := mustListItemsByBoard(ctx, t, svc, board)
+	requireEqualInt(t, len(*itemsByBoard), 1, "items by board")
 
-	itemsByBoard, err := svc.ListItemsByBoard(ctx, board)
-	if err != nil {
-		t.Fatalf("ListItemsByBoard: %v", err)
-	}
-	if len(*itemsByBoard) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(*itemsByBoard))
-	}
-
-	// Add tags and mark complete.
 	item.Tags = []string{"work", "go"}
 	item.Completed = true
 	item.Description = "updated desc"
-	updated, err := svc.UpdateItem(ctx, item)
-	if err != nil {
-		t.Fatalf("UpdateItem: %v", err)
-	}
-	if len(updated.Tags) != 2 {
-		t.Fatalf("expected tags to persist, got %+v", updated.Tags)
-	}
-	if !updated.Completed {
-		t.Fatalf("expected item to be completed")
-	}
+	updated := mustUpdateItem(ctx, t, svc, item)
+	requireEqualInt(t, len(updated.Tags), 2, "updated tags")
+	requireTrue(t, updated.Completed, "item completed flag")
+}
 
-	byTag, err := svc.ListItemsByTag(ctx, "work")
-	if err != nil {
-		t.Fatalf("ListItemsByTag: %v", err)
-	}
-	if len(*byTag) != 1 {
-		t.Fatalf("expected 1 item for tag 'work', got %d", len(*byTag))
-	}
+func TestTagCounts(t *testing.T) {
+	svc, cleanup := testutil.NewTestService(t)
+	defer cleanup()
 
-	count, err := svc.CountItemsByTag(ctx, "work")
-	if err != nil {
-		t.Fatalf("CountItemsByTag: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("expected 1 item counted for 'work', got %d", count)
-	}
+	ctx := testutil.MustContext()
+	board := mustCreateBoard(ctx, t, svc, "Tags")
+	item := mustCreateItem(ctx, t, svc, board, "tagged", "")
 
-	// Remove a tag and ensure counts adjust.
+	item.Tags = []string{"work", "go"}
+	item = mustUpdateItem(ctx, t, svc, item)
+
+	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "work"), 1, "count work tag")
+	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "go"), 1, "count go tag")
+
 	item.Tags = []string{"go"}
-	_, err = svc.UpdateItem(ctx, item)
-	if err != nil {
-		t.Fatalf("UpdateItem removing tag: %v", err)
-	}
+	item = mustUpdateItem(ctx, t, svc, item)
 
-	countWork, err := svc.CountItemsByTag(ctx, "work")
-	if err != nil {
-		t.Fatalf("CountItemsByTag work: %v", err)
-	}
-	if countWork != 0 {
-		t.Fatalf("expected work tag to be removed, count=%d", countWork)
-	}
+	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "work"), 0, "count work after removal")
+	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "go"), 1, "count go remains")
 
-	countGo, err := svc.CountItemsByTag(ctx, "go")
-	if err != nil {
-		t.Fatalf("CountItemsByTag go: %v", err)
-	}
-	if countGo != 1 {
-		t.Fatalf("expected go tag to remain, count=%d", countGo)
-	}
+	mustDeleteItem(ctx, t, svc, item)
+}
 
-	if err := svc.DeleteItem(ctx, item); err != nil {
-		t.Fatalf("DeleteItem: %v", err)
+func mustCreateBoard(ctx context.Context, t *testing.T, svc *service.Service, name string) *service.Board {
+	t.Helper()
+	board, err := svc.CreateBoard(ctx, name)
+	requireNoError(t, err, "CreateBoard")
+	return board
+}
+
+func mustListBoards(ctx context.Context, t *testing.T, svc *service.Service) *[]service.Board {
+	t.Helper()
+	boards, err := svc.ListBoards(ctx)
+	requireNoError(t, err, "ListBoards")
+	return boards
+}
+
+func mustUpdateBoard(ctx context.Context, t *testing.T, svc *service.Service, board *service.Board) *service.Board {
+	t.Helper()
+	updated, err := svc.UpdateBoard(ctx, board)
+	requireNoError(t, err, "UpdateBoard")
+	return updated
+}
+
+func mustDeleteBoard(ctx context.Context, t *testing.T, svc *service.Service, board *service.Board) {
+	t.Helper()
+	requireNoError(t, svc.DeleteBoard(ctx, board), "DeleteBoard")
+}
+
+func mustCreateItem(
+	ctx context.Context,
+	t *testing.T,
+	svc *service.Service,
+	board *service.Board,
+	title, desc string,
+) *service.Item {
+	t.Helper()
+	item, err := svc.CreateItem(ctx, board, title, desc)
+	requireNoError(t, err, "CreateItem")
+	return item
+}
+
+func mustUpdateItem(ctx context.Context, t *testing.T, svc *service.Service, item *service.Item) *service.Item {
+	t.Helper()
+	updated, err := svc.UpdateItem(ctx, item)
+	requireNoError(t, err, "UpdateItem")
+	return updated
+}
+
+func mustListItemsByBoard(
+	ctx context.Context,
+	t *testing.T,
+	svc *service.Service,
+	board *service.Board,
+) *[]service.Item {
+	t.Helper()
+	items, err := svc.ListItemsByBoard(ctx, board)
+	requireNoError(t, err, "ListItemsByBoard")
+	return items
+}
+
+func mustCountItemsByTag(ctx context.Context, t *testing.T, svc *service.Service, tag string) int {
+	t.Helper()
+	count, err := svc.CountItemsByTag(ctx, tag)
+	requireNoError(t, err, "CountItemsByTag")
+	return int(count)
+}
+
+func mustDeleteItem(ctx context.Context, t *testing.T, svc *service.Service, item *service.Item) {
+	t.Helper()
+	requireNoError(t, svc.DeleteItem(ctx, item), "DeleteItem")
+}
+
+func requireNoError(t *testing.T, err error, context string) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("%s: %v", context, err)
+	}
+}
+
+func requirePositiveID(t *testing.T, id int64) {
+	t.Helper()
+	if id == 0 {
+		t.Fatalf("expected ID to be set")
+	}
+}
+
+func requireEqualString(t *testing.T, got, expected string, label string) {
+	t.Helper()
+	if got != expected {
+		t.Fatalf("expected %s %q, got %q", label, expected, got)
+	}
+}
+
+func requireEqualInt(t *testing.T, got, expected int, label string) {
+	t.Helper()
+	if got != expected {
+		t.Fatalf("expected %s %d, got %d", label, expected, got)
+	}
+}
+
+func requireTrue(t *testing.T, v bool, label string) {
+	t.Helper()
+	if !v {
+		t.Fatalf("expected %s to be true", label)
+	}
+}
+
+func assertBoardNames(t *testing.T, boards *[]service.Board, names []string) {
+	t.Helper()
+	if len(*boards) != len(names) {
+		t.Fatalf("expected %d boards, got %d", len(names), len(*boards))
+	}
+	for i, b := range *boards {
+		if b.Name != names[i] {
+			t.Fatalf("unexpected board name %q at index %d", b.Name, i)
+		}
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"golang.design/x/clipboard"
 )
 
+//nolint:gochecknoglobals // injectable for tests
 var writeClipboardText = func(data []byte) {
 	clipboard.Write(clipboard.FmtText, data)
 }

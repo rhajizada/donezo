@@ -17,6 +17,8 @@ func TestCopySavesItemJSON(t *testing.T) {
 	defer cleanup()
 
 	ctx := testutil.MustContext()
+	var err error
+
 	board, err := svc.CreateBoard(ctx, "Inbox")
 	if err != nil {
 		t.Fatalf("CreateBoard: %v", err)
@@ -60,7 +62,8 @@ func TestCopySavesItemJSON(t *testing.T) {
 	}
 
 	var saved service.Item
-	if err := json.Unmarshal(captured, &saved); err != nil {
+	err = json.Unmarshal(captured, &saved)
+	if err != nil {
 		t.Fatalf("Unmarshal copied item: %v", err)
 	}
 
@@ -80,6 +83,8 @@ func TestPasteCreatesItemOnSelectedBoard(t *testing.T) {
 	defer cleanup()
 
 	ctx := testutil.MustContext()
+	var err error
+
 	board, err := svc.CreateBoard(ctx, "Inbox")
 	if err != nil {
 		t.Fatalf("CreateBoard: %v", err)
@@ -165,13 +170,13 @@ func TestItemCreateRenameToggleTagDeleteFlow(t *testing.T) {
 	// Create item via input flow.
 	menu.InitCreateItem()
 	menu.Input.SetValue("Title")
-	model, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if menu.Context.State != CreateItemDescState {
 		t.Fatalf("expected to prompt for description, got state %v", menu.Context.State)
 	}
 	menu.Input.SetValue("Desc")
-	model, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if cmd == nil {
 		t.Fatalf("expected create command")
@@ -187,7 +192,7 @@ func TestItemCreateRenameToggleTagDeleteFlow(t *testing.T) {
 	// Rename item via two-step input.
 	menu.InitRenameItem()
 	menu.Input.SetValue("New Title")
-	model, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if menu.Context.State != RenameItemDescState {
 		t.Fatalf("expected rename description state, got %v", menu.Context.State)
@@ -240,7 +245,7 @@ func TestItemCreateRenameToggleTagDeleteFlow(t *testing.T) {
 
 	// Delete item (clipboard write stubbed).
 	prevWrite := writeClipboardText
-	writeClipboardText = func(data []byte) {}
+	writeClipboardText = func(_ []byte) {}
 	defer func() { writeClipboardText = prevWrite }()
 
 	cmd = menu.DeleteItem()

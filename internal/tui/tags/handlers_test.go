@@ -5,15 +5,15 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
 	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
-func newTagMenu(t *testing.T) (MenuModel, *service.Service, func()) {
+func newTagMenu(t *testing.T) (MenuModel, func()) {
 	t.Helper()
 	svc, cleanup := testutil.NewTestService(t)
 	ctx := testutil.MustContext()
+	var err error
 
 	board, err := svc.CreateBoard(ctx, "Inbox")
 	if err != nil {
@@ -24,7 +24,8 @@ func newTagMenu(t *testing.T) (MenuModel, *service.Service, func()) {
 		t.Fatalf("CreateItem: %v", err)
 	}
 	item.Tags = []string{"work"}
-	if _, err := svc.UpdateItem(ctx, item); err != nil {
+	_, err = svc.UpdateItem(ctx, item)
+	if err != nil {
 		t.Fatalf("UpdateItem: %v", err)
 	}
 
@@ -33,12 +34,13 @@ func newTagMenu(t *testing.T) (MenuModel, *service.Service, func()) {
 	menu := NewModel(ctx, svc)
 	menu.List.SetItems(NewList([]Item{NewItem("work", tagCount)}))
 	menu.List.Select(0)
-	return menu, svc, cleanup
+	return menu, cleanup
 }
 
+//nolint:gocognit // covering keybinding branches
 func TestTagsKeyBindings(t *testing.T) {
 	t.Run("enter opens items", func(t *testing.T) {
-		menu, _, cleanup := newTagMenu(t)
+		menu, cleanup := newTagMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -51,7 +53,7 @@ func TestTagsKeyBindings(t *testing.T) {
 	})
 
 	t.Run("tab switches to boards", func(t *testing.T) {
-		menu, _, cleanup := newTagMenu(t)
+		menu, cleanup := newTagMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyTab})
@@ -64,7 +66,7 @@ func TestTagsKeyBindings(t *testing.T) {
 	})
 
 	t.Run("delete and refresh and copy", func(t *testing.T) {
-		menu, _, cleanup := newTagMenu(t)
+		menu, cleanup := newTagMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})

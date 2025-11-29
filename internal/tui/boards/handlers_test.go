@@ -10,7 +10,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
-func newBoardMenu(t *testing.T) (MenuModel, *service.Service, func()) {
+func newBoardMenu(t *testing.T) (MenuModel, func()) {
 	t.Helper()
 	svc, cleanup := testutil.NewTestService(t)
 	ctx := testutil.MustContext()
@@ -21,12 +21,13 @@ func newBoardMenu(t *testing.T) (MenuModel, *service.Service, func()) {
 	menu := New(ctx, svc)
 	menu.List.SetItems(NewList(&[]service.Board{*board}))
 	menu.List.Select(0)
-	return menu, svc, cleanup
+	return menu, cleanup
 }
 
+//nolint:gocognit // covering multiple keybinding branches
 func TestBoardsKeyBindings(t *testing.T) {
 	t.Run("enter opens items", func(t *testing.T) {
-		menu, _, cleanup := newBoardMenu(t)
+		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
 		model, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -44,7 +45,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 	})
 
 	t.Run("tab switches to tags", func(t *testing.T) {
-		menu, _, cleanup := newBoardMenu(t)
+		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyTab})
@@ -57,7 +58,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 	})
 
 	t.Run("create and rename set state", func(t *testing.T) {
-		menu, _, cleanup := newBoardMenu(t)
+		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
 		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
@@ -75,7 +76,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 	})
 
 	t.Run("delete sends DeleteBoardMsg", func(t *testing.T) {
-		menu, _, cleanup := newBoardMenu(t)
+		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
@@ -90,7 +91,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 	})
 
 	t.Run("refresh sends ListBoardsMsg", func(t *testing.T) {
-		menu, _, cleanup := newBoardMenu(t)
+		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'R'}})
@@ -105,7 +106,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 	})
 
 	t.Run("copy writes to clipboard", func(t *testing.T) {
-		menu, _, cleanup := newBoardMenu(t)
+		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
 		var captured []byte

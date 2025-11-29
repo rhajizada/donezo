@@ -11,10 +11,11 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/tags"
 )
 
-func newItemsByTagMenu(t *testing.T) (MenuModel, *service.Service, func()) {
+func newItemsByTagMenu(t *testing.T) (MenuModel, func()) {
 	t.Helper()
 	svc, cleanup := testutil.NewTestService(t)
 	ctx := testutil.MustContext()
+	var err error
 
 	board, err := svc.CreateBoard(ctx, "Inbox")
 	if err != nil {
@@ -25,7 +26,8 @@ func newItemsByTagMenu(t *testing.T) (MenuModel, *service.Service, func()) {
 		t.Fatalf("CreateItem: %v", err)
 	}
 	item.Tags = []string{"work"}
-	if _, err := svc.UpdateItem(ctx, item); err != nil {
+	_, err = svc.UpdateItem(ctx, item)
+	if err != nil {
 		t.Fatalf("UpdateItem: %v", err)
 	}
 
@@ -37,12 +39,13 @@ func newItemsByTagMenu(t *testing.T) (MenuModel, *service.Service, func()) {
 	menu := New(ctx, svc, &parent)
 	menu.List.SetItems(NewList(&[]service.Item{*item}))
 	menu.List.Select(0)
-	return menu, svc, cleanup
+	return menu, cleanup
 }
 
+//nolint:gocognit // covering keybinding branches
 func TestItemsByTagKeyBindings(t *testing.T) {
 	t.Run("back sends BackMsg", func(t *testing.T) {
-		menu, _, cleanup := newItemsByTagMenu(t)
+		menu, cleanup := newItemsByTagMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyBackspace})
@@ -55,7 +58,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 	})
 
 	t.Run("rename and update tags enter states", func(t *testing.T) {
-		menu, _, cleanup := newItemsByTagMenu(t)
+		menu, cleanup := newItemsByTagMenu(t)
 		defer cleanup()
 
 		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
@@ -73,7 +76,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 	})
 
 	t.Run("delete, refresh, toggle, navigation", func(t *testing.T) {
-		menu, _, cleanup := newItemsByTagMenu(t)
+		menu, cleanup := newItemsByTagMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})

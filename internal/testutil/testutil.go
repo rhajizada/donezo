@@ -33,12 +33,14 @@ func NewTestService(t *testing.T) (*service.Service, func()) {
 
 	baseFS, migrationsDir := migrationsFS(t)
 
-	if err := goose.SetDialect("sqlite3"); err != nil {
+	err = goose.SetDialect("sqlite3")
+	if err != nil {
 		t.Fatalf("SetDialect: %v", err)
 	}
 	goose.SetBaseFS(baseFS)
 
-	if err := goose.Up(db, migrationsDir); err != nil {
+	err = goose.Up(db, migrationsDir)
+	if err != nil {
 		t.Fatalf("goose.Up: %v", err)
 	}
 

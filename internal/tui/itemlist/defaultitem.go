@@ -145,7 +145,7 @@ func (d DefaultDelegate) Update(msg tea.Msg, m *Model) tea.Cmd {
 
 // Render prints an item.
 //
-//nolint:gocognit,gocritic // Rendering needs multiple branches for styling states; complexity unavoidable in view logic.
+
 func (d DefaultDelegate) Render(w io.Writer, m Model, index int, item Item) {
 	var (
 		title, desc  string

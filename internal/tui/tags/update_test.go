@@ -12,6 +12,7 @@ func TestCopyAndDeleteTag(t *testing.T) {
 	defer cleanup()
 
 	ctx := testutil.MustContext()
+	var err error
 	board, err := svc.CreateBoard(ctx, "Inbox")
 	if err != nil {
 		t.Fatalf("CreateBoard: %v", err)
@@ -21,7 +22,8 @@ func TestCopyAndDeleteTag(t *testing.T) {
 		t.Fatalf("CreateItem: %v", err)
 	}
 	item.Tags = []string{"work"}
-	if _, err := svc.UpdateItem(ctx, item); err != nil {
+	_, err = svc.UpdateItem(ctx, item)
+	if err != nil {
 		t.Fatalf("UpdateItem set tag: %v", err)
 	}
 

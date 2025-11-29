@@ -13,7 +13,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
-func newItemMenu(t *testing.T) (MenuModel, *service.Service, func()) {
+func newItemMenu(t *testing.T) (MenuModel, func()) {
 	t.Helper()
 	svc, cleanup := testutil.NewTestService(t)
 	ctx := testutil.MustContext()
@@ -33,12 +33,13 @@ func newItemMenu(t *testing.T) (MenuModel, *service.Service, func()) {
 	menu := New(ctx, svc, &parent)
 	menu.List.SetItems(NewList(&[]service.Item{*item}))
 	menu.List.Select(0)
-	return menu, svc, cleanup
+	return menu, cleanup
 }
 
+//nolint:gocognit // covering keybinding branches
 func TestItemsByBoardKeyBindings(t *testing.T) {
 	t.Run("back sends BackMsg", func(t *testing.T) {
-		menu, _, cleanup := newItemMenu(t)
+		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyBackspace})
@@ -51,7 +52,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 	})
 
 	t.Run("create enters input states", func(t *testing.T) {
-		menu, _, cleanup := newItemMenu(t)
+		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
 		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
@@ -62,7 +63,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 	})
 
 	t.Run("rename and update tags enter states", func(t *testing.T) {
-		menu, _, cleanup := newItemMenu(t)
+		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
 		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
@@ -80,7 +81,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 	})
 
 	t.Run("delete and refresh commands", func(t *testing.T) {
-		menu, _, cleanup := newItemMenu(t)
+		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
@@ -105,7 +106,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 	})
 
 	t.Run("toggle complete and navigation", func(t *testing.T) {
-		menu, _, cleanup := newItemMenu(t)
+		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
 		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeySpace})
@@ -136,7 +137,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 	})
 
 	t.Run("copy and paste", func(t *testing.T) {
-		menu, _, cleanup := newItemMenu(t)
+		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
 		var captured []byte
