@@ -43,12 +43,6 @@ jobs:
       - name: Run tests
         run: go tool gotestsum --junitfile results/unit-tests.xml
 
-      - name: Test Summary
-        uses: test-summary/action@v2
-        with:
-          paths: "results/*.xml"
-        if: always()
-
   build:
     name: build
     needs: lint
