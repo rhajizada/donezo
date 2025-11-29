@@ -2,7 +2,7 @@
 
 ![Go](https://img.shields.io/badge/Go-1.25-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![ci](https://github.com/rhajizada/donezo/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/rhajizada/donezo/actions/workflows/ci.yml/badge.svg)](https://github.com/rhajizada/donezo/actions/workflows/ci.yml)
 
 **donezo** is a simple TUI to-do app in written Go using
 [Bubble Tea](https://github.com/charmbracelet/bubbletea) and SQLite.
