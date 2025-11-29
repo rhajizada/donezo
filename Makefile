@@ -19,10 +19,9 @@ clean:
 	@rm bin/*
 
 
-.PHONY: deps
-## deps: Install dependecies
-deps:
-	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest && \
+.PHONY: mod
+## mod: Install dependecies
+mod:
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest \
 	@go mod download
 
@@ -40,6 +39,10 @@ install: build
 lint:
 	@golangci-lint run
 
+.PHONY: test
+## test: Run tests
+test:
+	@go tool gotestsum
 
 .PHONY: run
 ## run: Build and run in development mode
@@ -50,7 +53,7 @@ run:
 .PHONY: sqlc
 ## sqlc: Generate repository code using sqlc
 sqlc:
-	@sqlc generate
+	@go tool sqlc generate
 
 
 .PHONY: uninstall
