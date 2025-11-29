@@ -10,6 +10,10 @@ import (
 	"golang.design/x/clipboard"
 )
 
+var writeClipboardText = func(data []byte) {
+	clipboard.Write(clipboard.FmtText, data)
+}
+
 func (m *MenuModel) selectedItem() (Item, bool) {
 	item, ok := m.List.SelectedItem().(Item)
 	return item, ok
@@ -42,7 +46,7 @@ func (m *MenuModel) Copy() tea.Cmd {
 		}
 	}
 	md := service.ItemsToMarkdown(currentBoard.Name, *items)
-	clipboard.Write(clipboard.FmtText, []byte(md))
+	writeClipboardText([]byte(md))
 	return m.List.NewStatusMessage(
 		styles.StatusMessage.Render(
 			fmt.Sprintf("copied \"%s\" to system clipboard", currentBoard.Name),

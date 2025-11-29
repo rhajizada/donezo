@@ -15,6 +15,15 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var (
+	writeClipboardText = func(data []byte) {
+		clipboard.Write(clipboard.FmtText, data)
+	}
+	readClipboardText = func() []byte {
+		return clipboard.Read(clipboard.FmtText)
+	}
+)
+
 func (m *MenuModel) selectedItem() (Item, bool) {
 	item, ok := m.List.SelectedItem().(Item)
 	return item, ok
@@ -43,7 +52,7 @@ func (m *MenuModel) Copy() tea.Cmd {
 		}
 	}
 
-	clipboard.Write(clipboard.FmtText, data)
+	writeClipboardText(data)
 	return m.List.NewStatusMessage(
 		styles.StatusMessage.Render(
 			fmt.Sprintf("copied \"%s\" to system clipboard", selected.Itm.Title),
@@ -58,7 +67,7 @@ func (m *MenuModel) Paste() tea.Cmd {
 		return m.List.NewStatusMessage(styles.ErrorMessage.Render("no board selected"))
 	}
 
-	data := clipboard.Read(clipboard.FmtText)
+	data := readClipboardText()
 	var lastItem service.Item
 	err := json.Unmarshal(data, &lastItem)
 	if err != nil {
