@@ -40,6 +40,9 @@ jobs:
       - name: Static analysis
         run: go vet ./...
 
+      - name: Run tests
+        run: go tool gotestsum --junitfile results/unit-tests.xml
+
   build:
     name: build
     needs: lint

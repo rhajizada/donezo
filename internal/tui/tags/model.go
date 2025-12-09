@@ -8,6 +8,7 @@ import (
 	"github.com/rhajizada/donezo/internal/service"
 )
 
+//nolint:recvcheck // Mixed receivers align with tea.Model usage patterns.
 type MenuModel struct {
 	ctx    context.Context
 	List   list.Model
@@ -15,10 +16,7 @@ type MenuModel struct {
 	Client *service.Service
 }
 
-func (m MenuModel) Init() tea.Cmd {
-	return m.ListTags()
-}
-
+// NewModel constructs a new tag list menu.
 func NewModel(ctx context.Context, client *service.Service) MenuModel {
 	list := list.New(
 		[]list.Item{},
@@ -36,4 +34,8 @@ func NewModel(ctx context.Context, client *service.Service) MenuModel {
 		Keys:   &keymap,
 		Client: client,
 	}
+}
+
+func (m MenuModel) Init() tea.Cmd {
+	return m.ListTags()
 }

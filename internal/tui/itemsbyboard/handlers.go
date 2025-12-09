@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
 // HandleWindowSize processes window size messages.
@@ -17,7 +18,7 @@ func (m *MenuModel) HandleWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
 	return nil
 }
 
-// HandleError  processes errors and displays error messages
+// HandleError  processes errors and displays error messages.
 func (m *MenuModel) HandleError(msg ErrorMsg) tea.Cmd {
 	formattedMsg := fmt.Sprintf("error: %v", msg.Error)
 	return m.List.NewStatusMessage(
@@ -25,7 +26,7 @@ func (m *MenuModel) HandleError(msg ErrorMsg) tea.Cmd {
 	)
 }
 
-// HandleCreateItem handles CreateItemMsg
+// HandleCreateItem handles CreateItemMsg.
 func (m *MenuModel) HandleCreateItem(msg CreateItemMsg) tea.Cmd {
 	if msg.Error != nil {
 		return m.List.NewStatusMessage(
@@ -42,7 +43,7 @@ func (m *MenuModel) HandleCreateItem(msg CreateItemMsg) tea.Cmd {
 	)
 }
 
-// HandleDeleteItem handles DeleteItemMsg
+// HandleDeleteItem handles DeleteItemMsg.
 func (m *MenuModel) HandleDeleteItem(msg DeleteItemMsg) tea.Cmd {
 	if msg.Error != nil {
 		return m.List.NewStatusMessage(
@@ -50,13 +51,13 @@ func (m *MenuModel) HandleDeleteItem(msg DeleteItemMsg) tea.Cmd {
 				fmt.Sprintf("failed deleting item: %v", msg.Error),
 			),
 		)
-	} else {
-		return m.List.NewStatusMessage(
-			styles.StatusMessage.Render(
-				fmt.Sprintf("deleted item \"%s\"", msg.Item.Title),
-			),
-		)
 	}
+
+	return m.List.NewStatusMessage(
+		styles.StatusMessage.Render(
+			fmt.Sprintf("deleted item \"%s\"", msg.Item.Title),
+		),
+	)
 }
 
 func (m *MenuModel) HandleRenameItem(msg RenameItemMsg) tea.Cmd {
@@ -66,14 +67,14 @@ func (m *MenuModel) HandleRenameItem(msg RenameItemMsg) tea.Cmd {
 				fmt.Sprintf("failed renaming item: %v", msg.Error),
 			),
 		)
-	} else {
-		m.List.SetItem(m.List.Index(), NewItem(msg.Item))
-		return m.List.NewStatusMessage(
-			styles.StatusMessage.Render(
-				fmt.Sprintf("updated item \"%s\"", msg.Item.Title),
-			),
-		)
 	}
+
+	m.List.SetItem(m.List.Index(), NewItem(msg.Item))
+	return m.List.NewStatusMessage(
+		styles.StatusMessage.Render(
+			fmt.Sprintf("updated item \"%s\"", msg.Item.Title),
+		),
+	)
 }
 
 func (m *MenuModel) HandleUpdateTags(msg UpdateTagsMsg) tea.Cmd {
@@ -83,14 +84,14 @@ func (m *MenuModel) HandleUpdateTags(msg UpdateTagsMsg) tea.Cmd {
 				fmt.Sprintf("failed updating tags: %v", msg.Error),
 			),
 		)
-	} else {
-		m.List.SetItem(m.List.Index(), NewItem(msg.Item))
-		return m.List.NewStatusMessage(
-			styles.StatusMessage.Render(
-				fmt.Sprintf("updated item \"%s\" tags", msg.Item.Title),
-			),
-		)
 	}
+
+	m.List.SetItem(m.List.Index(), NewItem(msg.Item))
+	return m.List.NewStatusMessage(
+		styles.StatusMessage.Render(
+			fmt.Sprintf("updated item \"%s\" tags", msg.Item.Title),
+		),
+	)
 }
 
 func (m *MenuModel) HandleToggleItem(msg ToggleItemMsg) tea.Cmd {
@@ -100,24 +101,27 @@ func (m *MenuModel) HandleToggleItem(msg ToggleItemMsg) tea.Cmd {
 				fmt.Sprintf("failed toggling item: %v", msg.Error),
 			),
 		)
-	} else {
-		m.List.SetItem(m.List.Index(), NewItem(msg.Item))
-		selected := m.List.SelectedItem().(Item)
-		prefix := ""
-		if !selected.Itm.Completed {
-			prefix = "in"
-		}
-		mark := fmt.Sprintf("%scomplete", prefix)
-
-		return m.List.NewStatusMessage(
-			styles.StatusMessage.Render(
-				fmt.Sprintf("marked item \"%s\" as %s", msg.Item.Title, mark),
-			),
-		)
 	}
+
+	m.List.SetItem(m.List.Index(), NewItem(msg.Item))
+	selected, ok := m.selectedItem()
+	if !ok {
+		return m.List.NewStatusMessage(styles.ErrorMessage.Render("no item selected"))
+	}
+	prefix := ""
+	if !selected.Itm.Completed {
+		prefix = "in"
+	}
+	mark := fmt.Sprintf("%scomplete", prefix)
+
+	return m.List.NewStatusMessage(
+		styles.StatusMessage.Render(
+			fmt.Sprintf("marked item \"%s\" as %s", msg.Item.Title, mark),
+		),
+	)
 }
 
-// HandleInputState handles CreateItemState and RenameItemState states
+// HandleInputState handles CreateItemState and RenameItemState states.
 func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
@@ -127,6 +131,7 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 
 	// Only handle key messages in input states
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		//nolint:exhaustive // Only a subset of key types is handled.
 		switch keyMsg.Type {
 		case tea.KeyEnter:
 			switch m.Context.State {
@@ -144,9 +149,9 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 			case RenameItemNameState:
 				m.Context.Title = m.Input.Value()
 				m.Context.State = RenameItemDescState
-				selected, ok := m.List.SelectedItem().(Item)
+				selected, selectedOK := m.selectedItem()
 
-				if ok {
+				if selectedOK {
 					m.Input.Placeholder = selected.Itm.Description
 					m.Input.SetValue(selected.Itm.Description)
 					m.Input.Focus()
@@ -161,18 +166,24 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 				m.Context.State = DefaultState
 				m.Input.Blur()
 				cmds = append(cmds, m.UpdateTags())
+			case DefaultState:
+				// no-op
+			default:
+				// other states ignored
 			}
 		case tea.KeyEsc:
 			// Cancel the current operation
 			m.Context.State = DefaultState
 			m.Input.Blur()
+		default:
+			// ignore other key types
 		}
 	}
 
 	return m.Input, cmds
 }
 
-// HandleKeyInput processes key inputs not handles by list.Model
+// HandleKeyInput processes key inputs not handles by list.Model.
 func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
 	if m.List.SettingFilter() {
@@ -196,7 +207,11 @@ func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.Keys.Paste):
 		cmd = m.Paste()
 	case key.Matches(msg, m.Keys.Back):
-		cmd = nil
+		cmd = func() tea.Msg { return navigation.BackMsg{} }
+	case key.Matches(msg, m.Keys.NextBoard):
+		cmd = func() tea.Msg { return navigation.BoardDeltaMsg{Delta: 1} }
+	case key.Matches(msg, m.Keys.PreviousBoard):
+		cmd = func() tea.Msg { return navigation.BoardDeltaMsg{Delta: -1} }
 	}
 	return cmd
 }

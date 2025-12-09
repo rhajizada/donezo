@@ -10,6 +10,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/tags"
 )
 
+//nolint:recvcheck // Mixed receivers align with tea.Model usage patterns.
 type MenuModel struct {
 	ctx     context.Context
 	Parent  *tags.MenuModel
@@ -31,7 +32,10 @@ func New(ctx context.Context, service *service.Service, parent *tags.MenuModel) 
 		0,
 		0,
 	)
-	parentItem := parent.List.SelectedItem().(tags.Item)
+	parentItem, ok := parent.List.SelectedItem().(tags.Item)
+	if !ok {
+		parentItem = tags.Item{}
+	}
 	input := textinput.New()
 	keymap := NewKeymap()
 	inputContext := NewInputContext()

@@ -1,6 +1,7 @@
 package itemsbytag
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,10 +13,28 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+func (m *MenuModel) selectedItem() (Item, bool) {
+	item, ok := m.List.SelectedItem().(Item)
+	return item, ok
+}
+
+func (m *MenuModel) selectedTag() (tags.Item, bool) {
+	if m.Parent == nil {
+		return tags.Item{}, false
+	}
+
+	item, ok := m.Parent.List.SelectedItem().(tags.Item)
+	return item, ok
+}
+
 // ListItems fetches items in the selected board.
 func (m *MenuModel) ListItems() tea.Cmd {
 	return func() tea.Msg {
-		parentItem := m.Parent.List.SelectedItem().(tags.Item)
+		parentItem, ok := m.selectedTag()
+		if !ok {
+			return ErrorMsg{errors.New("no tag selected")}
+		}
+
 		items, err := m.Service.ListItemsByTag(m.ctx, parentItem.Tag)
 		if err != nil {
 			return ErrorMsg{err}
@@ -26,10 +45,14 @@ func (m *MenuModel) ListItems() tea.Cmd {
 	}
 }
 
-// RenameItem renames selected item
+// RenameItem renames selected item.
 func (m *MenuModel) RenameItem() tea.Cmd {
 	return func() tea.Msg {
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return RenameItemMsg{Error: errors.New("no item selected")}
+		}
+
 		selected.Itm.Title = m.Context.Title
 		selected.Itm.Description = m.Context.Desc
 		item, err := m.Service.UpdateItem(m.ctx, &selected.Itm)
@@ -40,11 +63,14 @@ func (m *MenuModel) RenameItem() tea.Cmd {
 	}
 }
 
-// UpdateTags updates item tags
+// UpdateTags updates item tags.
 func (m *MenuModel) UpdateTags() tea.Cmd {
 	return func() tea.Msg {
 		var item *service.Item
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return UpdateTagsMsg{Item: nil, Error: errors.New("no item selected")}
+		}
 		tags, err := helpers.ExtractTags(m.Context.Title)
 		if err != nil {
 			return UpdateTagsMsg{
@@ -62,7 +88,7 @@ func (m *MenuModel) UpdateTags() tea.Cmd {
 	}
 }
 
-// initiateRename starts the renaming process for the selected item.
+// InitRenameItem starts the renaming process for the selected item.
 func (m *MenuModel) InitRenameItem() tea.Cmd {
 	if len(m.List.Items()) == 0 {
 		return m.List.NewStatusMessage(
@@ -70,27 +96,35 @@ func (m *MenuModel) InitRenameItem() tea.Cmd {
 	}
 
 	m.Context.State = RenameItemNameState
-	selected := m.List.SelectedItem().(Item)
-	m.Input.SetValue(selected.Itm.Title)
+	selected, ok := m.selectedItem()
+	if ok {
+		m.Input.SetValue(selected.Itm.Title)
+	}
 	m.Input.Focus()
 	return nil
 }
 
-// InitUpdateTags initiaizes tag updates
+// InitUpdateTags initializes tag updates.
 func (m *MenuModel) InitUpdateTags() tea.Cmd {
 	m.Context.State = UpdateTagsState
 	m.Input.Placeholder = "Enter comma-separated list of tags"
-	selected := m.List.SelectedItem().(Item)
-	dSep := fmt.Sprintf(" %s", helpers.TagsSeparator)
-	m.Input.SetValue(strings.Join(selected.Itm.Tags, dSep))
+	selected, ok := m.selectedItem()
+	if ok {
+		dSep := fmt.Sprintf(" %s", helpers.TagsSeparator)
+		m.Input.SetValue(strings.Join(selected.Itm.Tags, dSep))
+	}
 	m.Input.Focus()
 	return nil
 }
 
-// DeleteBoard deletes current selected board
+// DeleteItem deletes current selected item.
 func (m *MenuModel) DeleteItem() tea.Cmd {
 	return func() tea.Msg {
-		selected := m.List.SelectedItem().(Item)
+		selected, ok := m.selectedItem()
+		if !ok {
+			return DeleteItemMsg{Error: errors.New("no item selected")}
+		}
+
 		err := m.Service.DeleteItem(m.ctx, &selected.Itm)
 		return DeleteItemMsg{Error: err, Item: &selected.Itm}
 	}
@@ -102,7 +136,10 @@ func (m MenuModel) ToggleComplete() tea.Cmd {
 			styles.ErrorMessage.Render("no item selected"))
 	}
 
-	selected := m.List.SelectedItem().(Item)
+	selected, ok := m.selectedItem()
+	if !ok {
+		return m.List.NewStatusMessage(styles.ErrorMessage.Render("no item selected"))
+	}
 	selected.Itm.Completed = !selected.Itm.Completed
 	m.List.SetItem(m.List.Index(), selected)
 

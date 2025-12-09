@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
 // HandleWindowSize processes window size messages.
@@ -17,7 +18,7 @@ func (m *MenuModel) HandleWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
 	return nil
 }
 
-// HandleError  processes errors and displays error messages
+// HandleError  processes errors and displays error messages.
 func (m *MenuModel) HandleError(msg ErrorMsg) tea.Cmd {
 	formattedMsg := fmt.Sprintf("error: %v", msg.Error)
 	return m.List.NewStatusMessage(
@@ -25,7 +26,7 @@ func (m *MenuModel) HandleError(msg ErrorMsg) tea.Cmd {
 	)
 }
 
-// HandleCreateBoard handles CreateBoardMsg
+// HandleCreateBoard handles CreateBoardMsg.
 func (m *MenuModel) HandleCreateBoard(msg CreateBoardMsg) tea.Cmd {
 	if msg.Error != nil {
 		return m.List.NewStatusMessage(
@@ -42,7 +43,7 @@ func (m *MenuModel) HandleCreateBoard(msg CreateBoardMsg) tea.Cmd {
 	)
 }
 
-// HandleDeleteBoard handles DeleteBoardMsg
+// HandleDeleteBoard handles DeleteBoardMsg.
 func (m *MenuModel) HandleDeleteBoard(msg DeleteBoardMsg) tea.Cmd {
 	if msg.Error != nil {
 		return m.List.NewStatusMessage(
@@ -50,13 +51,13 @@ func (m *MenuModel) HandleDeleteBoard(msg DeleteBoardMsg) tea.Cmd {
 				fmt.Sprintf("failed deleting board: %v", msg.Error),
 			),
 		)
-	} else {
-		return m.List.NewStatusMessage(
-			styles.StatusMessage.Render(
-				fmt.Sprintf("deleted board \"%s\"", msg.Board.Name),
-			),
-		)
 	}
+
+	return m.List.NewStatusMessage(
+		styles.StatusMessage.Render(
+			fmt.Sprintf("deleted board \"%s\"", msg.Board.Name),
+		),
+	)
 }
 
 func (m *MenuModel) HandleRenameBoard(msg RenameBoardMsg) tea.Cmd {
@@ -66,17 +67,17 @@ func (m *MenuModel) HandleRenameBoard(msg RenameBoardMsg) tea.Cmd {
 				fmt.Sprintf("failed renaming board: %v", msg.Error),
 			),
 		)
-	} else {
-		m.List.SetItem(m.List.Index(), NewItem(msg.Board))
-		return m.List.NewStatusMessage(
-			styles.StatusMessage.Render(
-				fmt.Sprintf("renamed board to \"%s\"", msg.Board.Name),
-			),
-		)
 	}
+
+	m.List.SetItem(m.List.Index(), NewItem(msg.Board))
+	return m.List.NewStatusMessage(
+		styles.StatusMessage.Render(
+			fmt.Sprintf("renamed board to \"%s\"", msg.Board.Name),
+		),
+	)
 }
 
-// HandleInputState handles CreateBoardState and RenameBoardState states
+// HandleInputState handles CreateBoardState and RenameBoardState states.
 func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
@@ -86,6 +87,7 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 
 	// Only handle key messages in input states
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		//nolint:exhaustive // We only care about a subset of key types here.
 		switch keyMsg.Type {
 		case tea.KeyEnter:
 			switch m.State {
@@ -97,21 +99,25 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 				cmds = append(cmds, m.RenameBoard())
 				m.State = DefaultState
 				m.Input.Blur()
+			case DefaultState:
+				// no-op
 			}
 		case tea.KeyEsc:
 			// Cancel the current operation
 			m.State = DefaultState
 			m.Input.Blur()
+		default:
+			// ignore other key types
 		}
 	}
 
 	return m.Input, cmds
 }
 
-// HandleKeyInput processes key inputs not handles by list.Model
+// HandleKeyInput processes key inputs not handles by list.Model.
 func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
-	if !m.List.SettingFilter() {
+	if !m.List.SettingFilter() && m.State == DefaultState {
 		switch {
 		case key.Matches(msg, m.Keys.CreateBoard):
 			cmd = m.InitCreateBoard()
@@ -123,6 +129,14 @@ func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 			cmd = m.ListBoards()
 		case key.Matches(msg, m.Keys.Copy):
 			cmd = m.Copy()
+		case key.Matches(msg, m.Keys.ListTags):
+			cmd = func() tea.Msg {
+				return navigation.SwitchMainViewMsg{View: navigation.ViewTags}
+			}
+		case key.Matches(msg, m.Keys.Choose):
+			cmd = func() tea.Msg {
+				return navigation.OpenBoardItemsMsg{}
+			}
 		}
 	}
 	return cmd

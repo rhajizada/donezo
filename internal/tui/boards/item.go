@@ -5,7 +5,7 @@ import (
 	"github.com/rhajizada/donezo/internal/service"
 )
 
-// Item represents item in the list
+// Item represents item in the list.
 type Item struct {
 	Board service.Board
 }

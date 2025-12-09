@@ -5,8 +5,11 @@ import (
 )
 
 const (
-	bullet   = "•"
-	ellipsis = "…"
+	bullet        = "•"
+	ellipsis      = "…"
+	leftPadding   = 2
+	bottomPadding = 1
+	helpTopMargin = 1
 )
 
 // Styles contains style definitions for this list component. By default, these
@@ -43,11 +46,12 @@ type Styles struct {
 // component.
 //
 // TODO: styles from files
-func DefaultStyles() (s Styles) {
+func DefaultStyles() Styles {
+	var s Styles
 	verySubduedColor := lipgloss.AdaptiveColor{Light: "#DDDADA", Dark: "#3C3C3C"}
 	subduedColor := lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"}
 
-	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2) //nolint:mnd
+	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, bottomPadding, leftPadding)
 
 	s.Title = lipgloss.NewStyle().
 		Background(lipgloss.Color("62")).
@@ -67,7 +71,7 @@ func DefaultStyles() (s Styles) {
 
 	s.StatusBar = lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"}).
-		Padding(0, 0, 1, 2) //nolint:mnd
+		Padding(0, 0, bottomPadding, leftPadding)
 
 	s.StatusEmpty = lipgloss.NewStyle().Foreground(subduedColor)
 
@@ -81,9 +85,9 @@ func DefaultStyles() (s Styles) {
 
 	s.ArabicPagination = lipgloss.NewStyle().Foreground(subduedColor)
 
-	s.PaginationStyle = lipgloss.NewStyle().PaddingLeft(2) //nolint:mnd
+	s.PaginationStyle = lipgloss.NewStyle().PaddingLeft(leftPadding)
 
-	s.HelpStyle = lipgloss.NewStyle().Padding(1, 0, 0, 2) //nolint:mnd
+	s.HelpStyle = lipgloss.NewStyle().Padding(helpTopMargin, 0, 0, leftPadding)
 
 	s.ActivePaginationDot = lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#847A85", Dark: "#979797"}).

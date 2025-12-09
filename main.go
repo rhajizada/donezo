@@ -22,57 +22,45 @@ import (
 
 //go:embed data/sql/migrations/*.sql
 var migrations embed.FS
-var Version = "dev"
+
+var Version = "dev" //nolint:gochecknoglobals // overridden at build time via ldflags
 
 func main() {
+	if err := run(); err != nil {
+		log.Panic(err)
+	}
+}
+
+func run() error {
 	versionFlag := flag.Bool("version", false, "Print version information and exit")
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("donezo %s\n", Version)
-		os.Exit(0)
+		fmt.Fprintf(os.Stdout, "donezo %s\n", Version)
+		return nil
 	}
-	err := clipboard.Init()
+
+	if err := clipboard.Init(); err != nil {
+		return fmt.Errorf("unable to access system clipboard: %w", err)
+	}
+
+	dbPath, err := ensureDataDir()
 	if err != nil {
-		log.Panicf("unable to access system clipboard: %v", err)
+		return err
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Panicf("unable to determine user home directory: %v", err)
-	}
-	donezoDir := filepath.Join(homeDir, ".donezo")
-	if _, err = os.Stat(donezoDir); os.IsNotExist(err) {
-		err = os.Mkdir(donezoDir, 0700)
-		if err != nil {
-			log.Panicf("failed to create directory %s: %v", donezoDir, err)
-		}
-	}
-
-	dbPath := filepath.Join(donezoDir, "data.db")
-
-	// Load database
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		log.Panicf("failed to open database %s: %v", dbPath, err)
+		return fmt.Errorf("failed to open database %s: %w", dbPath, err)
 	}
 	defer func() {
-		if err := db.Close(); err != nil {
-			log.Panicf("failed to close database %s: %v", dbPath, err)
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("failed to close database %s: %v", dbPath, cerr)
 		}
 	}()
 
-	// Set Goose dialect to SQLite
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		log.Panicf("failed to set Goose dialect: %v", err)
-	}
-
-	// Set the embedded migrations as the base FS for Goose
-	goose.SetBaseFS(migrations)
-
-	// Apply all up migrations
-	if err := goose.Up(db, "data/sql/migrations"); err != nil {
-		log.Panicf("failed to apply migrations: %v", err)
+	if migrateErr := runMigrations(db); migrateErr != nil {
+		return migrateErr
 	}
 
 	r := repository.New(db)
@@ -82,7 +70,43 @@ func main() {
 	m := app.New(ctx, s)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
-	if _, err := p.Run(); err != nil {
-		log.Panicf("error running program: %v", err)
+	if _, programErr := p.Run(); programErr != nil {
+		return fmt.Errorf("error running program: %w", programErr)
 	}
+
+	return nil
+}
+
+func ensureDataDir() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("unable to determine user home directory: %w", err)
+	}
+
+	donezoDir := filepath.Join(homeDir, ".donezo")
+	if _, err = os.Stat(donezoDir); err != nil {
+		if os.IsNotExist(err) {
+			if mkErr := os.Mkdir(donezoDir, 0700); mkErr != nil {
+				return "", fmt.Errorf("failed to create directory %s: %w", donezoDir, mkErr)
+			}
+		} else {
+			return "", fmt.Errorf("failed to check directory %s: %w", donezoDir, err)
+		}
+	}
+
+	return filepath.Join(donezoDir, "data.db"), nil
+}
+
+func runMigrations(db *sql.DB) error {
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		return fmt.Errorf("failed to set Goose dialect: %w", err)
+	}
+
+	goose.SetBaseFS(migrations)
+
+	if err := goose.Up(db, "data/sql/migrations"); err != nil {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
+	return nil
 }

@@ -2,13 +2,13 @@ package itemsbyboard
 
 import "strings"
 
-// Helper functions for string manipulation
-func truncate(s string, max int, ellipsis string) string {
-	if len(s) > max {
-		if max-len(ellipsis) > 0 {
-			return s[:max-len(ellipsis)] + ellipsis
+// Helper functions for string manipulation.
+func truncate(s string, maxLen int, ellipsis string) string {
+	if len(s) > maxLen {
+		if maxLen-len(ellipsis) > 0 {
+			return s[:maxLen-len(ellipsis)] + ellipsis
 		}
-		return s[:max]
+		return s[:maxLen]
 	}
 	return s
 }

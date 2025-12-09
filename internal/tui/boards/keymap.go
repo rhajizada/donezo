@@ -4,7 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 )
 
-// Keymap embeds default list keymap and adds other Binding
+// Keymap embeds default list keymap and adds other Binding.
 type Keymap struct {
 	Choose        key.Binding
 	ListTags      key.Binding
@@ -20,8 +20,8 @@ type Keymap struct {
 func NewKeymap() Keymap {
 	return Keymap{
 		Choose: key.NewBinding(
-			key.WithKeys("return"),
-			key.WithHelp("return", "choose board"),
+			key.WithKeys("enter", "return"),
+			key.WithHelp("enter", "choose board"),
 		),
 		ListTags: key.NewBinding(
 			key.WithKeys("tab"),
@@ -41,7 +41,7 @@ func NewKeymap() Keymap {
 			key.WithHelp("R", "refresh list"),
 		),
 		Copy: key.NewBinding(key.WithKeys("y"),
-			key.WithHelp("y", "copy name to system clipboard"),
+			key.WithHelp("y", "copy board to system clipboard"),
 		),
 	}
 }

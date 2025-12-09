@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
 
 // HandleWindowSize processes window size messages.
@@ -16,7 +17,7 @@ func (m *MenuModel) HandleWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
 	return nil
 }
 
-// HandleError  processes errors and displays error messages
+// HandleError  processes errors and displays error messages.
 func (m *MenuModel) HandleError(msg ErrorMsg) tea.Cmd {
 	formattedMsg := fmt.Sprintf("error: %v", msg.Error)
 	return m.List.NewStatusMessage(
@@ -24,7 +25,7 @@ func (m *MenuModel) HandleError(msg ErrorMsg) tea.Cmd {
 	)
 }
 
-// HandleDeleteTag handles DeleteTagMsg
+// HandleDeleteTag handles DeleteTagMsg.
 func (m *MenuModel) HandleDeleteTag(msg DeleteTagMsg) tea.Cmd {
 	if msg.Error != nil {
 		return m.List.NewStatusMessage(
@@ -32,16 +33,16 @@ func (m *MenuModel) HandleDeleteTag(msg DeleteTagMsg) tea.Cmd {
 				fmt.Sprintf("failed deleting tag: %v", msg.Error),
 			),
 		)
-	} else {
-		return m.List.NewStatusMessage(
-			styles.StatusMessage.Render(
-				fmt.Sprintf("deleted tag \"%s\"", msg.Tag),
-			),
-		)
 	}
+
+	return m.List.NewStatusMessage(
+		styles.StatusMessage.Render(
+			fmt.Sprintf("deleted tag \"%s\"", msg.Tag),
+		),
+	)
 }
 
-// HandleKeyInput processes key inputs not handles by list.Model
+// HandleKeyInput processes key inputs not handles by list.Model.
 func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
 	if !m.List.SettingFilter() {
@@ -52,6 +53,14 @@ func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
 			cmd = m.ListTags()
 		case key.Matches(msg, m.Keys.Copy):
 			cmd = m.Copy()
+		case key.Matches(msg, m.Keys.ListBoards):
+			cmd = func() tea.Msg {
+				return navigation.SwitchMainViewMsg{View: navigation.ViewBoards}
+			}
+		case key.Matches(msg, m.Keys.Choose):
+			cmd = func() tea.Msg {
+				return navigation.OpenTagItemsMsg{}
+			}
 		}
 	}
 	return cmd

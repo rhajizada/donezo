@@ -1,8 +1,8 @@
 # donezo
 
-![Go](https://img.shields.io/badge/Go-1.24-blue.svg)
+![Go](https://img.shields.io/badge/Go-1.25-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![ci](https://github.com/rhajizada/donezo/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/rhajizada/donezo/actions/workflows/ci.yml/badge.svg)](https://github.com/rhajizada/donezo/actions/workflows/ci.yml)
 
 **donezo** is a simple TUI to-do app in written Go using
 [Bubble Tea](https://github.com/charmbracelet/bubbletea) and SQLite.
@@ -23,12 +23,3 @@ git clone https://github.com/rhajizada/donezo.git
 cd donezo
 make install
 ```
-
-## Roadmap
-
-- 1.0
-  - Implement comprehensive test coverage for all modules.
-  - Set up CI using GitHub Actions.
-  - Automate releases and publish them via GitHub Actions.
-  - Add support for custom app styling.
-  - Introduce configuration options for app customization.

@@ -22,7 +22,7 @@ func New(r *repository.Queries) *Service {
 
 // unmarshalTags converts the interface returned from sqlc for the tags field
 // into a slice of strings by performing the proper type assertions.
-func unmarshalTags(v interface{}) []string {
+func unmarshalTags(v any) []string {
 	var tags []string
 	switch t := v.(type) {
 	case []byte:
@@ -42,7 +42,7 @@ func unmarshalTags(v interface{}) []string {
 	return tags
 }
 
-// Board-related functions.
+// ListBoards returns all boards.
 func (s *Service) ListBoards(ctx context.Context) (*[]Board, error) {
 	data, err := s.Repo.ListBoards(ctx)
 	if err != nil {
@@ -183,7 +183,7 @@ func (s *Service) UpdateItem(ctx context.Context, item *Item) (*Item, error) {
 	// Remove tags that are not in the updated item.
 	for _, t := range existingTags {
 		if _, found := newTagsMap[t]; !found {
-			err := s.Repo.RemoveTagFromItemByID(ctx, repository.RemoveTagFromItemByIDParams{
+			err = s.Repo.RemoveTagFromItemByID(ctx, repository.RemoveTagFromItemByIDParams{
 				ItemID: data.ID,
 				Tag:    t,
 			})
@@ -196,7 +196,7 @@ func (s *Service) UpdateItem(ctx context.Context, item *Item) (*Item, error) {
 	// Add new tags that are missing in the database.
 	for _, t := range item.Tags {
 		if _, found := existingTagsMap[t]; !found {
-			err := s.Repo.AddTagToItemByID(ctx, repository.AddTagToItemByIDParams{
+			err = s.Repo.AddTagToItemByID(ctx, repository.AddTagToItemByIDParams{
 				ItemID: data.ID,
 				Tag:    t,
 			})
@@ -225,7 +225,7 @@ func (s *Service) listTagsByItemID(ctx context.Context, itemID int64) []string {
 	return tags
 }
 
-// Tag-related functions.
+// ListTags returns all tags.
 func (s *Service) ListTags(ctx context.Context) ([]string, error) {
 	return s.Repo.ListTags(ctx)
 }
