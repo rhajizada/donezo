@@ -53,7 +53,7 @@ jobs:
         if: always()
 
   coverage:
-    name: Coverage
+    name: coverage
     needs: lint
     if: inputs.coverage
     runs-on: ubuntu-latest
