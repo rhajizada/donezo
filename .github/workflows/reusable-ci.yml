@@ -5,6 +5,11 @@ on:
         description: "Version to build"
         required: true
         type: string
+      coverage:
+        description: "Whether to run coverage and update badge"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   lint:
@@ -46,6 +51,72 @@ jobs:
         with:
           paths: "results/*.xml"
         if: always()
+
+  coverage:
+    name: Coverage
+    needs: lint
+    if: inputs.coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Run coverage
+        run: |
+          pkgs=()
+          while IFS= read -r pkg; do
+            pkgs+=("$pkg")
+          done < <(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$)")
+          go tool gotestsum -- -coverprofile=coverage.out "${pkgs[@]}"
+        shell: bash
+
+      - name: Parse coverage
+        id: coverage
+        run: |
+          coverage="$(go tool cover -func=coverage.out | awk '/^total:/{print $3}')"
+          coverage_value="${coverage%\%}"
+          coverage_int="${coverage_value%.*}"
+          if [ -z "$coverage_int" ]; then
+            echo "Failed to parse coverage percentage." >&2
+            exit 1
+          fi
+          case "$coverage_int" in
+            9[5-9]|100) color="brightgreen" ;;
+            8[5-9]) color="green" ;;
+            7[0-9]) color="yellowgreen" ;;
+            5[0-9]) color="yellow" ;;
+            3[0-9]) color="orange" ;;
+            *) color="red" ;;
+          esac
+          echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
+          echo "color=$color" >> "$GITHUB_OUTPUT"
+
+      - name: Update badge
+        env:
+          SIGNUM_BADGE_ID: ${{ vars.SIGNUM_BADGE_ID }}
+          SIGNUM_BADGE_TOKEN: ${{ secrets.SIGNUM_BADGE_TOKEN }}
+          COVERAGE: ${{ steps.coverage.outputs.coverage }}
+          COLOR: ${{ steps.coverage.outputs.color }}
+        run: |
+          response="$(
+            curl -sS -X PATCH \
+              "https://signum.rhajizada.dev/api/badges/${SIGNUM_BADGE_ID}" \
+              -H 'accept: application/json' \
+              -H "Authorization: Bearer ${SIGNUM_BADGE_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -d "{\"color\":\"${COLOR}\",\"status\":\"${COVERAGE}\"}" \
+              -w "\n%{http_code}"
+          )"
+          http_body="$(echo "$response" | sed '$d')"
+          http_code="$(echo "$response" | tail -n 1)"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Badge update failed (${http_code}): ${http_body}" >&2
+            exit 1
+          fi
 
   build:
     name: build

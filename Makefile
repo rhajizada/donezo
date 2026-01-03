@@ -44,6 +44,11 @@ lint:
 test:
 	@go tool gotestsum
 
+.PHONY: coverage
+## coverage: Run tests with coverage
+coverage:
+	@bash -c 'set -euo pipefail; pkgs=(); while IFS= read -r pkg; do pkgs+=("$$pkg"); done < <(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$$)"); go tool gotestsum -- -coverprofile=coverage.out "$${pkgs[@]}"'
+
 .PHONY: run
 ## run: Build and run in development mode
 run:

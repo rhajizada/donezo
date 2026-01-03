@@ -23,3 +23,4 @@ jobs:
     uses: ./.github/workflows/reusable-ci.yml
     with:
       version: ${{ needs.env.outputs.version }}
+      coverage: ${{ github.ref == 'refs/heads/main' }}
