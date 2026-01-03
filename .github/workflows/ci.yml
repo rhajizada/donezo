@@ -4,24 +4,222 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*.*.*"
   pull_request:
     branches:
       - "*"
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   env:
-    runs-on: [ubuntu-latest]
+    name: Set versions
+    runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.env.outputs.version }}
+      build_version: ${{ steps.env.outputs.build_version }}
+      is_release: ${{ steps.env.outputs.is_release }}
     steps:
-      - name: Set build version
+      - name: Determine versions
         id: env
-        run: echo "version=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            version="${{ github.ref_name }}"
+            build_version="${version#v}"
+            is_release=true
+          else
+            build_version="${GITHUB_SHA::7}"
+            is_release=false
+          fi
+          echo "build_version=$build_version" >> "$GITHUB_OUTPUT"
+          echo "is_release=$is_release" >> "$GITHUB_OUTPUT"
 
-  ci:
+  test:
+    name: Test
     needs: env
-    uses: ./.github/workflows/reusable-ci.yml
-    secrets: inherit
-    with:
-      version: ${{ needs.env.outputs.version }}
-      coverage: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Install X11 headers (for Linux clipboard cgo)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential libx11-dev
+
+      - name: Lint with golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          args: --timeout 5m
+
+      - name: Check code formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            exit 1
+          fi
+
+      - name: Static analysis
+        run: go vet ./...
+
+      - name: Run tests
+        if: ${{ !(github.ref == 'refs/heads/main' && github.event_name == 'push') }}
+        run: go tool gotestsum --junitfile results/unit-tests.xml
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "results/*.xml"
+        if: ${{ always() && !(github.ref == 'refs/heads/main' && github.event_name == 'push') }}
+
+      - name: Run coverage
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        run: |
+          pkgs="$(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$)" | paste -sd ' ' -)"
+          if [ -z "$pkgs" ]; then
+            echo "No packages matched for coverage." >&2
+            exit 1
+          fi
+          go test -count=1 -coverprofile=coverage.out $pkgs
+        shell: bash
+
+      - name: Parse coverage
+        id: coverage
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        run: |
+          coverage="$(go tool cover -func=coverage.out | awk '/^total:/{print $3}')"
+          coverage_value="${coverage%\%}"
+          coverage_int="${coverage_value%.*}"
+          if [ -z "$coverage_int" ]; then
+            echo "Failed to parse coverage percentage." >&2
+            exit 1
+          fi
+          case "$coverage_int" in
+            9[5-9]|100) color="brightgreen" ;;
+            8[5-9]) color="green" ;;
+            7[0-9]) color="yellowgreen" ;;
+            5[0-9]) color="yellow" ;;
+            3[0-9]) color="orange" ;;
+            *) color="red" ;;
+          esac
+          echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
+          echo "color=$color" >> "$GITHUB_OUTPUT"
+
+      - name: Update badge
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        env:
+          SIGNUM_BADGE_ID: ${{ vars.SIGNUM_BADGE_ID }}
+          SIGNUM_BADGE_TOKEN: ${{ secrets.SIGNUM_BADGE_TOKEN }}
+          COVERAGE: ${{ steps.coverage.outputs.coverage }}
+          COLOR: ${{ steps.coverage.outputs.color }}
+        run: |
+          response="$(
+            curl -sS -X PATCH \
+              "https://signum.rhajizada.dev/api/badges/${SIGNUM_BADGE_ID}" \
+              -H 'accept: application/json' \
+              -H "Authorization: Bearer ${SIGNUM_BADGE_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -d "{\"color\":\"${COLOR}\",\"status\":\"${COVERAGE}\"}" \
+              -w "\n%{http_code}"
+          )"
+          http_body="$(echo "$response" | sed '$d')"
+          http_code="$(echo "$response" | tail -n 1)"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Badge update failed (${http_code}): ${http_body}" >&2
+            exit 1
+          fi
+
+  build:
+    name: Build
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libx11-dev
+
+      - name: Build
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p bin
+          OUT="bin/donezo"
+          if [ "$GOOS" = "windows" ]; then
+            OUT="${OUT}.exe"
+          fi
+          go build -ldflags="-s -w -X main.Version=${{ needs.env.outputs.build_version }}" -o "${OUT}" .
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: donezo-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bin/*
+
+  release:
+    name: Release
+    needs: [env, build]
+    if: ${{ needs.env.outputs.is_release == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        id: download
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}/artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir dist
+          find "${{ github.workspace }}/artifacts" -type f -name "donezo" | while read -r file; do
+            parent_dir=$(basename "$(dirname "$file")")
+            temp_dir=$(mktemp -d)
+            cp "$file" "$temp_dir/donezo"
+            chmod +x "$temp_dir/donezo"
+            tar -czf "dist/${parent_dir}.tar.gz" -C "$temp_dir" donezo
+            rm -rf "$temp_dir"
+          done
+        shell: bash
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
