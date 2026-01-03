@@ -19,8 +19,21 @@
 
 ## Installation
 
+### Homebrew
+
+```bash
+brew install rhajizada/tap/copycat
+```
+
+### From source
+
 ```bash
 git clone https://github.com/rhajizada/donezo.git
 cd donezo
 make install
 ```
+
+## 🤝 Contribute
+
+- Issues and forks are welcome.
+- PRs are welcome; require maintainer review before merge.
