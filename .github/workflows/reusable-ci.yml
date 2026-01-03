@@ -67,11 +67,12 @@ jobs:
 
       - name: Run coverage
         run: |
-          pkgs=()
-          while IFS= read -r pkg; do
-            pkgs+=("$pkg")
-          done < <(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$)")
-          go tool gotestsum -- -coverprofile=coverage.out "${pkgs[@]}"
+          pkgs="$(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$)" | paste -sd ' ' -)"
+          if [ -z "$pkgs" ]; then
+            echo "No packages matched for coverage." >&2
+            exit 1
+          fi
+          go test -count=1 -coverprofile=coverage.out $pkgs
         shell: bash
 
       - name: Parse coverage
