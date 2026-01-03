@@ -43,6 +43,16 @@ jobs:
       - name: Static analysis
         run: go vet ./...
 
+      - name: Run tests
+        if: ${{ !inputs.coverage }}
+        run: go tool gotestsum --junitfile results/unit-tests.xml
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "results/*.xml"
+        if: ${{ always() && !inputs.coverage }}
+
       - name: Run coverage
         if: inputs.coverage
         run: |
@@ -53,16 +63,6 @@ jobs:
           fi
           go test -count=1 -coverprofile=coverage.out $pkgs
         shell: bash
-
-      - name: Run tests
-        if: ${{ !inputs.coverage }}
-        run: go tool gotestsum --junitfile results/unit-tests.xml
-
-      - name: Test Summary
-        uses: test-summary/action@v2
-        with:
-          paths: "results/*.xml"
-        if: ${{ always() && !inputs.coverage }}
 
       - name: Parse coverage
         id: coverage
