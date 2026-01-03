@@ -21,6 +21,7 @@ jobs:
   ci:
     needs: env
     uses: ./.github/workflows/reusable-ci.yml
+    secrets: inherit
     with:
       version: ${{ needs.env.outputs.version }}
       coverage: ${{ github.ref == 'refs/heads/main' }}
