@@ -43,29 +43,8 @@ jobs:
       - name: Static analysis
         run: go vet ./...
 
-      - name: Run tests
-        run: go tool gotestsum --junitfile results/unit-tests.xml
-
-      - name: Test Summary
-        uses: test-summary/action@v2
-        with:
-          paths: "results/*.xml"
-        if: always()
-
-  coverage:
-    name: coverage
-    needs: lint
-    if: inputs.coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          check-latest: true
-
       - name: Run coverage
+        if: inputs.coverage
         run: |
           pkgs="$(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$)" | paste -sd ' ' -)"
           if [ -z "$pkgs" ]; then
@@ -75,8 +54,19 @@ jobs:
           go test -count=1 -coverprofile=coverage.out $pkgs
         shell: bash
 
+      - name: Run tests
+        if: ${{ !inputs.coverage }}
+        run: go tool gotestsum --junitfile results/unit-tests.xml
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "results/*.xml"
+        if: ${{ always() && !inputs.coverage }}
+
       - name: Parse coverage
         id: coverage
+        if: inputs.coverage
         run: |
           coverage="$(go tool cover -func=coverage.out | awk '/^total:/{print $3}')"
           coverage_value="${coverage%\%}"
@@ -97,6 +87,7 @@ jobs:
           echo "color=$color" >> "$GITHUB_OUTPUT"
 
       - name: Update badge
+        if: inputs.coverage
         env:
           SIGNUM_BADGE_ID: ${{ vars.SIGNUM_BADGE_ID }}
           SIGNUM_BADGE_TOKEN: ${{ secrets.SIGNUM_BADGE_TOKEN }}
