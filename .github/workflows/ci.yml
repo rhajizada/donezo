@@ -105,7 +105,7 @@ jobs:
             8[5-9]) color="green" ;;
             7[0-9]) color="yellowgreen" ;;
             5[0-9]) color="yellow" ;;
-            3[0-9]) color="orange" ;;
+            3[0-9]|4[0-9]) color="orange" ;;
             *) color="red" ;;
           esac
           echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
