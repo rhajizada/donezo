@@ -216,15 +216,6 @@ func (s *Service) DeleteItem(ctx context.Context, item *Item) error {
 	return s.Repo.DeleteItemByID(ctx, item.ID)
 }
 
-// Private helper to get tags for an item.
-func (s *Service) listTagsByItemID(ctx context.Context, itemID int64) []string {
-	tags, err := s.Repo.ListTagsByItemID(ctx, itemID)
-	if err != nil {
-		return []string{}
-	}
-	return tags
-}
-
 // ListTags returns all tags.
 func (s *Service) ListTags(ctx context.Context) ([]string, error) {
 	return s.Repo.ListTags(ctx)
@@ -250,4 +241,13 @@ func ItemsToMarkdown(header string, items []Item) string {
 		md = append(md, fmt.Sprintf("\t- %s", v.Description))
 	}
 	return strings.Join(md, "\n")
+}
+
+// Private helper to get tags for an item.
+func (s *Service) listTagsByItemID(ctx context.Context, itemID int64) []string {
+	tags, err := s.Repo.ListTagsByItemID(ctx, itemID)
+	if err != nil {
+		return []string{}
+	}
+	return tags
 }

@@ -19,7 +19,7 @@ repos:
   - repo: https://github.com/golangci/golangci-lint
     rev: v2.8.0
     hooks:
-      - id: golangci-lint
+      - id: golangci-lint-full
       - id: golangci-lint-fmt
       - id: golangci-lint-config-verify
   - repo: local

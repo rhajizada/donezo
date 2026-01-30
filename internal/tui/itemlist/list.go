@@ -722,128 +722,6 @@ func (m *Model) SetHeight(v int) {
 	m.setSize(m.width, v)
 }
 
-func (m *Model) setSize(width, height int) {
-	promptWidth := lipgloss.Width(m.Styles.Title.Render(m.FilterInput.Prompt))
-
-	m.width = width
-	m.height = height
-	m.Help.Width = width
-	m.FilterInput.Width = width - promptWidth - lipgloss.Width(m.spinnerView())
-	m.updatePagination()
-}
-
-func (m *Model) resetFiltering() {
-	if m.filterState == Unfiltered {
-		return
-	}
-
-	m.filterState = Unfiltered
-	m.FilterInput.Reset()
-	m.filteredItems = nil
-	m.updatePagination()
-	m.updateKeybindings()
-}
-
-func (m Model) itemsAsFilterItems() filteredItems {
-	fi := make([]filteredItem, len(m.items))
-	for i, item := range m.items {
-		fi[i] = filteredItem{
-			item: item,
-		}
-	}
-	return fi
-}
-
-// Set keybindings according to the filter state.
-func (m *Model) updateKeybindings() {
-	switch m.filterState { //nolint:exhaustive // Unfiltered handled in default branch
-	case Filtering:
-		m.KeyMap.CursorUp.SetEnabled(false)
-		m.KeyMap.CursorDown.SetEnabled(false)
-		m.KeyMap.NextPage.SetEnabled(false)
-		m.KeyMap.PrevPage.SetEnabled(false)
-		m.KeyMap.GoToStart.SetEnabled(false)
-		m.KeyMap.GoToEnd.SetEnabled(false)
-		m.KeyMap.Filter.SetEnabled(false)
-		m.KeyMap.ClearFilter.SetEnabled(false)
-		m.KeyMap.CancelWhileFiltering.SetEnabled(true)
-		m.KeyMap.AcceptWhileFiltering.SetEnabled(m.FilterInput.Value() != "")
-		m.KeyMap.Quit.SetEnabled(false)
-		m.KeyMap.ShowFullHelp.SetEnabled(false)
-		m.KeyMap.CloseFullHelp.SetEnabled(false)
-
-	default:
-		hasItems := len(m.items) != 0
-		m.KeyMap.CursorUp.SetEnabled(hasItems)
-		m.KeyMap.CursorDown.SetEnabled(hasItems)
-
-		hasPages := m.Paginator.TotalPages > 1
-		m.KeyMap.NextPage.SetEnabled(hasPages)
-		m.KeyMap.PrevPage.SetEnabled(hasPages)
-
-		m.KeyMap.GoToStart.SetEnabled(hasItems)
-		m.KeyMap.GoToEnd.SetEnabled(hasItems)
-
-		m.KeyMap.Filter.SetEnabled(m.filteringEnabled && hasItems)
-		m.KeyMap.ClearFilter.SetEnabled(m.filterState == FilterApplied)
-		m.KeyMap.CancelWhileFiltering.SetEnabled(false)
-		m.KeyMap.AcceptWhileFiltering.SetEnabled(false)
-		m.KeyMap.Quit.SetEnabled(!m.disableQuitKeybindings)
-
-		if m.Help.ShowAll {
-			m.KeyMap.ShowFullHelp.SetEnabled(true)
-			m.KeyMap.CloseFullHelp.SetEnabled(true)
-		} else {
-			minHelp := countEnabledBindings(m.FullHelp()) > 1
-			m.KeyMap.ShowFullHelp.SetEnabled(minHelp)
-			m.KeyMap.CloseFullHelp.SetEnabled(minHelp)
-		}
-	}
-}
-
-// Update pagination according to the amount of items for the current state.
-func (m *Model) updatePagination() {
-	index := m.Index()
-	availHeight := m.height
-
-	if m.showTitle || (m.showFilter && m.filteringEnabled) {
-		availHeight -= lipgloss.Height(m.titleView())
-	}
-	if m.showStatusBar {
-		availHeight -= lipgloss.Height(m.statusView())
-	}
-	if m.showPagination {
-		availHeight -= lipgloss.Height(m.paginationView())
-	}
-	if m.showHelp {
-		availHeight -= lipgloss.Height(m.helpView())
-	}
-
-	m.Paginator.PerPage = max(1, availHeight/(m.delegate.Height()+m.delegate.Spacing()))
-
-	if pages := len(m.VisibleItems()); pages < 1 {
-		m.Paginator.SetTotalPages(1)
-	} else {
-		m.Paginator.SetTotalPages(pages)
-	}
-
-	// Restore index
-	m.Paginator.Page = index / m.Paginator.PerPage
-	m.cursor = index % m.Paginator.PerPage
-
-	// Make sure the page stays in bounds
-	if m.Paginator.Page >= m.Paginator.TotalPages-1 {
-		m.Paginator.Page = max(0, m.Paginator.TotalPages-1)
-	}
-}
-
-func (m *Model) hideStatusMessage() {
-	m.statusMessage = ""
-	if m.statusMessageTimer != nil {
-		m.statusMessageTimer.Stop()
-	}
-}
-
 // Update is the Bubble Tea update loop.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
@@ -876,131 +754,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
-}
-
-// Updates for when a user is browsing the list.
-func (m *Model) handleBrowsing(msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
-	numItems := len(m.VisibleItems())
-
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		switch {
-		// Note: we match clear filter before quit because, by default, they're
-		// both mapped to escape.
-		case key.Matches(keyMsg, m.KeyMap.ClearFilter):
-			m.resetFiltering()
-
-		case key.Matches(keyMsg, m.KeyMap.Quit):
-			return tea.Quit
-
-		case key.Matches(keyMsg, m.KeyMap.CursorUp):
-			m.CursorUp()
-
-		case key.Matches(keyMsg, m.KeyMap.CursorDown):
-			m.CursorDown()
-
-		case key.Matches(keyMsg, m.KeyMap.PrevPage):
-			m.Paginator.PrevPage()
-
-		case key.Matches(keyMsg, m.KeyMap.NextPage):
-			m.Paginator.NextPage()
-
-		case key.Matches(keyMsg, m.KeyMap.GoToStart):
-			m.Paginator.Page = 0
-			m.cursor = 0
-
-		case key.Matches(keyMsg, m.KeyMap.GoToEnd):
-			m.Paginator.Page = m.Paginator.TotalPages - 1
-			m.cursor = m.Paginator.ItemsOnPage(numItems) - 1
-
-		case key.Matches(keyMsg, m.KeyMap.Filter):
-			m.hideStatusMessage()
-			if m.FilterInput.Value() == "" {
-				// Populate filter with all items only if the filter is empty.
-				m.filteredItems = m.itemsAsFilterItems()
-			}
-			m.Paginator.Page = 0
-			m.cursor = 0
-			m.filterState = Filtering
-			m.FilterInput.CursorEnd()
-			m.FilterInput.Focus()
-			m.updateKeybindings()
-			return textinput.Blink
-		case key.Matches(keyMsg, m.KeyMap.ToggleHide):
-			m.ToggleHide()
-		case key.Matches(keyMsg, m.KeyMap.ShowFullHelp):
-			fallthrough
-		case key.Matches(keyMsg, m.KeyMap.CloseFullHelp):
-			m.Help.ShowAll = !m.Help.ShowAll
-			m.updatePagination()
-		}
-	}
-
-	cmd := m.delegate.Update(msg, m)
-	cmds = append(cmds, cmd)
-
-	// Keep the index in bounds when paginating
-	itemsOnPage := m.Paginator.ItemsOnPage(len(m.VisibleItems()))
-	if m.cursor > itemsOnPage-1 {
-		m.cursor = max(0, itemsOnPage-1)
-	}
-
-	return tea.Batch(cmds...)
-}
-
-// Updates for when a user is in the filter editing interface.
-func (m *Model) handleFiltering(msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
-
-	// Handle keys
-	if msg, ok := msg.(tea.KeyMsg); ok {
-		switch {
-		case key.Matches(msg, m.KeyMap.CancelWhileFiltering):
-			m.resetFiltering()
-			m.KeyMap.Filter.SetEnabled(true)
-			m.KeyMap.ClearFilter.SetEnabled(false)
-
-		case key.Matches(msg, m.KeyMap.AcceptWhileFiltering):
-			m.hideStatusMessage()
-
-			if len(m.items) == 0 {
-				break
-			}
-
-			h := m.VisibleItems()
-
-			// If we've filtered down to nothing, clear the filter
-			if len(h) == 0 {
-				m.resetFiltering()
-				break
-			}
-
-			m.FilterInput.Blur()
-			m.filterState = FilterApplied
-			m.updateKeybindings()
-
-			if m.FilterInput.Value() == "" {
-				m.resetFiltering()
-			}
-		}
-	}
-
-	// Update the filter text input component
-	newFilterInputModel, inputCmd := m.FilterInput.Update(msg)
-	filterChanged := m.FilterInput.Value() != newFilterInputModel.Value()
-	m.FilterInput = newFilterInputModel
-	cmds = append(cmds, inputCmd)
-
-	// If the filtering input has changed, request updated filtering
-	if filterChanged {
-		cmds = append(cmds, filterItems(*m))
-		m.KeyMap.AcceptWhileFiltering.SetEnabled(m.FilterInput.Value() != "")
-	}
-
-	// Update pagination
-	m.updatePagination()
-
-	return tea.Batch(cmds...)
 }
 
 // ShortHelp returns bindings to show in the abbreviated help view. It's part
@@ -1137,6 +890,253 @@ func (m Model) View() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
+}
+
+// Updates for when a user is browsing the list.
+func (m *Model) handleBrowsing(msg tea.Msg) tea.Cmd {
+	var cmds []tea.Cmd
+	numItems := len(m.VisibleItems())
+
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch {
+		// Note: we match clear filter before quit because, by default, they're
+		// both mapped to escape.
+		case key.Matches(keyMsg, m.KeyMap.ClearFilter):
+			m.resetFiltering()
+
+		case key.Matches(keyMsg, m.KeyMap.Quit):
+			return tea.Quit
+
+		case key.Matches(keyMsg, m.KeyMap.CursorUp):
+			m.CursorUp()
+
+		case key.Matches(keyMsg, m.KeyMap.CursorDown):
+			m.CursorDown()
+
+		case key.Matches(keyMsg, m.KeyMap.PrevPage):
+			m.Paginator.PrevPage()
+
+		case key.Matches(keyMsg, m.KeyMap.NextPage):
+			m.Paginator.NextPage()
+
+		case key.Matches(keyMsg, m.KeyMap.GoToStart):
+			m.Paginator.Page = 0
+			m.cursor = 0
+
+		case key.Matches(keyMsg, m.KeyMap.GoToEnd):
+			m.Paginator.Page = m.Paginator.TotalPages - 1
+			m.cursor = m.Paginator.ItemsOnPage(numItems) - 1
+
+		case key.Matches(keyMsg, m.KeyMap.Filter):
+			m.hideStatusMessage()
+			if m.FilterInput.Value() == "" {
+				// Populate filter with all items only if the filter is empty.
+				m.filteredItems = m.itemsAsFilterItems()
+			}
+			m.Paginator.Page = 0
+			m.cursor = 0
+			m.filterState = Filtering
+			m.FilterInput.CursorEnd()
+			m.FilterInput.Focus()
+			m.updateKeybindings()
+			return textinput.Blink
+		case key.Matches(keyMsg, m.KeyMap.ToggleHide):
+			m.ToggleHide()
+		case key.Matches(keyMsg, m.KeyMap.ShowFullHelp):
+			fallthrough
+		case key.Matches(keyMsg, m.KeyMap.CloseFullHelp):
+			m.Help.ShowAll = !m.Help.ShowAll
+			m.updatePagination()
+		}
+	}
+
+	cmd := m.delegate.Update(msg, m)
+	cmds = append(cmds, cmd)
+
+	// Keep the index in bounds when paginating
+	itemsOnPage := m.Paginator.ItemsOnPage(len(m.VisibleItems()))
+	if m.cursor > itemsOnPage-1 {
+		m.cursor = max(0, itemsOnPage-1)
+	}
+
+	return tea.Batch(cmds...)
+}
+
+// Updates for when a user is in the filter editing interface.
+func (m *Model) handleFiltering(msg tea.Msg) tea.Cmd {
+	var cmds []tea.Cmd
+
+	// Handle keys
+	if msg, ok := msg.(tea.KeyMsg); ok {
+		switch {
+		case key.Matches(msg, m.KeyMap.CancelWhileFiltering):
+			m.resetFiltering()
+			m.KeyMap.Filter.SetEnabled(true)
+			m.KeyMap.ClearFilter.SetEnabled(false)
+
+		case key.Matches(msg, m.KeyMap.AcceptWhileFiltering):
+			m.hideStatusMessage()
+
+			if len(m.items) == 0 {
+				break
+			}
+
+			h := m.VisibleItems()
+
+			// If we've filtered down to nothing, clear the filter
+			if len(h) == 0 {
+				m.resetFiltering()
+				break
+			}
+
+			m.FilterInput.Blur()
+			m.filterState = FilterApplied
+			m.updateKeybindings()
+
+			if m.FilterInput.Value() == "" {
+				m.resetFiltering()
+			}
+		}
+	}
+
+	// Update the filter text input component
+	newFilterInputModel, inputCmd := m.FilterInput.Update(msg)
+	filterChanged := m.FilterInput.Value() != newFilterInputModel.Value()
+	m.FilterInput = newFilterInputModel
+	cmds = append(cmds, inputCmd)
+
+	// If the filtering input has changed, request updated filtering
+	if filterChanged {
+		cmds = append(cmds, filterItems(*m))
+		m.KeyMap.AcceptWhileFiltering.SetEnabled(m.FilterInput.Value() != "")
+	}
+
+	// Update pagination
+	m.updatePagination()
+
+	return tea.Batch(cmds...)
+}
+
+func (m *Model) setSize(width, height int) {
+	promptWidth := lipgloss.Width(m.Styles.Title.Render(m.FilterInput.Prompt))
+
+	m.width = width
+	m.height = height
+	m.Help.Width = width
+	m.FilterInput.Width = width - promptWidth - lipgloss.Width(m.spinnerView())
+	m.updatePagination()
+}
+
+func (m *Model) resetFiltering() {
+	if m.filterState == Unfiltered {
+		return
+	}
+
+	m.filterState = Unfiltered
+	m.FilterInput.Reset()
+	m.filteredItems = nil
+	m.updatePagination()
+	m.updateKeybindings()
+}
+
+func (m Model) itemsAsFilterItems() filteredItems {
+	fi := make([]filteredItem, len(m.items))
+	for i, item := range m.items {
+		fi[i] = filteredItem{
+			item: item,
+		}
+	}
+	return fi
+}
+
+// Set keybindings according to the filter state.
+func (m *Model) updateKeybindings() {
+	switch m.filterState { //nolint:exhaustive // Unfiltered handled in default branch
+	case Filtering:
+		m.KeyMap.CursorUp.SetEnabled(false)
+		m.KeyMap.CursorDown.SetEnabled(false)
+		m.KeyMap.NextPage.SetEnabled(false)
+		m.KeyMap.PrevPage.SetEnabled(false)
+		m.KeyMap.GoToStart.SetEnabled(false)
+		m.KeyMap.GoToEnd.SetEnabled(false)
+		m.KeyMap.Filter.SetEnabled(false)
+		m.KeyMap.ClearFilter.SetEnabled(false)
+		m.KeyMap.CancelWhileFiltering.SetEnabled(true)
+		m.KeyMap.AcceptWhileFiltering.SetEnabled(m.FilterInput.Value() != "")
+		m.KeyMap.Quit.SetEnabled(false)
+		m.KeyMap.ShowFullHelp.SetEnabled(false)
+		m.KeyMap.CloseFullHelp.SetEnabled(false)
+
+	default:
+		hasItems := len(m.items) != 0
+		m.KeyMap.CursorUp.SetEnabled(hasItems)
+		m.KeyMap.CursorDown.SetEnabled(hasItems)
+
+		hasPages := m.Paginator.TotalPages > 1
+		m.KeyMap.NextPage.SetEnabled(hasPages)
+		m.KeyMap.PrevPage.SetEnabled(hasPages)
+
+		m.KeyMap.GoToStart.SetEnabled(hasItems)
+		m.KeyMap.GoToEnd.SetEnabled(hasItems)
+
+		m.KeyMap.Filter.SetEnabled(m.filteringEnabled && hasItems)
+		m.KeyMap.ClearFilter.SetEnabled(m.filterState == FilterApplied)
+		m.KeyMap.CancelWhileFiltering.SetEnabled(false)
+		m.KeyMap.AcceptWhileFiltering.SetEnabled(false)
+		m.KeyMap.Quit.SetEnabled(!m.disableQuitKeybindings)
+
+		if m.Help.ShowAll {
+			m.KeyMap.ShowFullHelp.SetEnabled(true)
+			m.KeyMap.CloseFullHelp.SetEnabled(true)
+		} else {
+			minHelp := countEnabledBindings(m.FullHelp()) > 1
+			m.KeyMap.ShowFullHelp.SetEnabled(minHelp)
+			m.KeyMap.CloseFullHelp.SetEnabled(minHelp)
+		}
+	}
+}
+
+// Update pagination according to the amount of items for the current state.
+func (m *Model) updatePagination() {
+	index := m.Index()
+	availHeight := m.height
+
+	if m.showTitle || (m.showFilter && m.filteringEnabled) {
+		availHeight -= lipgloss.Height(m.titleView())
+	}
+	if m.showStatusBar {
+		availHeight -= lipgloss.Height(m.statusView())
+	}
+	if m.showPagination {
+		availHeight -= lipgloss.Height(m.paginationView())
+	}
+	if m.showHelp {
+		availHeight -= lipgloss.Height(m.helpView())
+	}
+
+	m.Paginator.PerPage = max(1, availHeight/(m.delegate.Height()+m.delegate.Spacing()))
+
+	if pages := len(m.VisibleItems()); pages < 1 {
+		m.Paginator.SetTotalPages(1)
+	} else {
+		m.Paginator.SetTotalPages(pages)
+	}
+
+	// Restore index
+	m.Paginator.Page = index / m.Paginator.PerPage
+	m.cursor = index % m.Paginator.PerPage
+
+	// Make sure the page stays in bounds
+	if m.Paginator.Page >= m.Paginator.TotalPages-1 {
+		m.Paginator.Page = max(0, m.Paginator.TotalPages-1)
+	}
+}
+
+func (m *Model) hideStatusMessage() {
+	m.statusMessage = ""
+	if m.statusMessageTimer != nil {
+		m.statusMessageTimer.Stop()
+	}
 }
 
 func (m Model) titleView() string {
