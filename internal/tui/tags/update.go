@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"golang.design/x/clipboard"
+
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/tui/styles"
-	"golang.design/x/clipboard"
 )
 
 //nolint:gochecknoglobals // injectable for tests

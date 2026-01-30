@@ -24,4 +24,3 @@ RETURNING *;
 -- name: DeleteBoardByID :exec
 DELETE FROM boards
 WHERE id = ?;
-

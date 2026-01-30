@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3" // sqlite driver
 	"github.com/pressly/goose/v3"
+
 	"github.com/rhajizada/donezo/internal/repository"
 	"github.com/rhajizada/donezo/internal/service"
 )

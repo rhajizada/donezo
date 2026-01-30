@@ -30,4 +30,3 @@ END;
 -- +goose StatementBegin
 DROP TABLE IF EXISTS tags;
 -- +goose StatementEnd
-

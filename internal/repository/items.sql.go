@@ -51,7 +51,7 @@ func (q *Queries) DeleteItemByID(ctx context.Context, id int64) error {
 }
 
 const getItemByID = `-- name: GetItemByID :one
-SELECT 
+SELECT
     i.id,
     i.board_id,
     i.title,
@@ -94,7 +94,7 @@ func (q *Queries) GetItemByID(ctx context.Context, id int64) (GetItemByIDRow, er
 }
 
 const listItemsByBoardID = `-- name: ListItemsByBoardID :many
-SELECT 
+SELECT
     i.id,
     i.board_id,
     i.title,

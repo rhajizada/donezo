@@ -21,7 +21,7 @@ DELETE FROM items
 WHERE id = ?;
 
 -- name: GetItemByID :one
-SELECT 
+SELECT
     i.id,
     i.board_id,
     i.title,
@@ -36,7 +36,7 @@ WHERE i.id = ?
 GROUP BY i.id;
 
 -- name: ListItemsByBoardID :many
-SELECT 
+SELECT
     i.id,
     i.board_id,
     i.title,
@@ -50,4 +50,3 @@ LEFT JOIN tags t ON i.id = t.item_id
 WHERE i.board_id = ?
 GROUP BY i.id
 ORDER BY i.created_at;
-

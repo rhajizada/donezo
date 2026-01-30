@@ -51,7 +51,7 @@ func (q *Queries) DeleteTag(ctx context.Context, tag string) error {
 }
 
 const listItemsByTag = `-- name: ListItemsByTag :many
-SELECT 
+SELECT
     i.id,
     i.board_id,
     i.title,

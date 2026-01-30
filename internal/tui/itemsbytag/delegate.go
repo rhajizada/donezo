@@ -8,6 +8,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
 

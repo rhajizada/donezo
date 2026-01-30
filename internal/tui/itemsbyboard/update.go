@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.design/x/clipboard"
+
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/tui/boards"
 	"github.com/rhajizada/donezo/internal/tui/helpers"
 	"github.com/rhajizada/donezo/internal/tui/styles"
-	"golang.design/x/clipboard"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

@@ -33,9 +33,7 @@ jobs:
 
       - name: Check code formatting
         run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            exit 1
-          fi
+          golangci-lint fmt --diff
 
       - name: Static analysis
         run: go vet ./...

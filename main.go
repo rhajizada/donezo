@@ -11,10 +11,11 @@ import (
 	"path/filepath"
 
 	"github.com/pressly/goose/v3"
+	"golang.design/x/clipboard"
+
 	"github.com/rhajizada/donezo/internal/repository"
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/tui/app"
-	"golang.design/x/clipboard"
 
 	tea "github.com/charmbracelet/bubbletea"
 	_ "github.com/mattn/go-sqlite3"
@@ -86,7 +87,7 @@ func ensureDataDir() (string, error) {
 	donezoDir := filepath.Join(homeDir, ".donezo")
 	if _, err = os.Stat(donezoDir); err != nil {
 		if os.IsNotExist(err) {
-			if mkErr := os.Mkdir(donezoDir, 0700); mkErr != nil {
+			if mkErr := os.Mkdir(donezoDir, 0o700); mkErr != nil {
 				return "", fmt.Errorf("failed to create directory %s: %w", donezoDir, mkErr)
 			}
 		} else {

@@ -7,7 +7,7 @@ WHERE item_id = ?
 ORDER BY tag;
 
 -- name: ListItemsByTag :many
-SELECT 
+SELECT
     i.id,
     i.board_id,
     i.title,
@@ -41,4 +41,3 @@ WHERE item_id = ? AND tag = ?;
 -- name: DeleteTag :exec
 DELETE FROM tags
 WHERE tag = ?;
-

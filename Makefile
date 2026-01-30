@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := help
+
 VERSION := $(shell \
   tag=$$(git describe --tags --exact-match 2>/dev/null || true); \
   if [ -n "$$tag" ] && echo "$$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$$'; then \
@@ -39,15 +41,28 @@ install: build
 lint:
 	@golangci-lint run
 
+.PHONY: fmt
+## fmt: Format source code
+fmt:
+	@golangci-lint fmt
+
 .PHONY: test
 ## test: Run tests
 test:
 	@go tool gotestsum
 
+## coverage:  Generate coverage report
 .PHONY: coverage
-## coverage: Run tests with coverage
 coverage:
-	@bash -c 'set -euo pipefail; pkgs=(); while IFS= read -r pkg; do pkgs+=("$$pkg"); done < <(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$$)"); go tool gotestsum -- -coverprofile=coverage.out "$${pkgs[@]}"'
+	@set -euo pipefail; \
+	mod="$$(go list -m -f '{{.Path}}')"; \
+	go list ./... \
+		| grep -vE '/(docs|vendor|mocks|testdata|internal/repository|internal/testutil)(/|$$)' \
+		| grep -vFx "$$mod" \
+		| xargs go tool gotestsum -- -coverprofile=coverage.out > /dev/null; \
+	go tool cover -func=coverage.out
+
+
 
 .PHONY: run
 ## run: Build and run in development mode

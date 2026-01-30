@@ -61,9 +61,7 @@ jobs:
 
       - name: Check code formatting
         run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            exit 1
-          fi
+          golangci-lint fmt --diff
 
       - name: Static analysis
         run: go vet ./...
@@ -81,12 +79,17 @@ jobs:
       - name: Run coverage
         if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
         run: |
-          pkgs="$(go list ./... | grep -vE "/(docs|vendor|mocks|testdata|internal/repository)(/|$)" | paste -sd ' ' -)"
+          set -euo pipefail
+          mod="$(go list -m -f '{{.Path}}')"
+          pkgs="$(go list ./... \
+            | grep -vE '/(docs|vendor|mocks|testdata|internal/repository|internal/testutil)(/|$)' \
+            | grep -vFx "$mod" || true)"
+
           if [ -z "$pkgs" ]; then
             echo "No packages matched for coverage." >&2
             exit 1
           fi
-          go test -count=1 -coverprofile=coverage.out $pkgs
+          go tool gotestsum -- -coverprofile=coverage.out $pkgs > /dev/null
         shell: bash
 
       - name: Parse coverage
