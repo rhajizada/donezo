@@ -133,7 +133,6 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 
 	// Only handle key messages in input states
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		//nolint:exhaustive // Only a subset of key types is handled.
 		switch keyMsg.Code {
 		case tea.KeyEnter:
 			switch m.Context.State {
