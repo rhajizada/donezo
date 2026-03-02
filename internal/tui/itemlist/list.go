@@ -6,22 +6,23 @@ package itemlist
 import (
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/rhajizada/donezo/internal/tui/styles"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/sahilm/fuzzy"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/paginator"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/paginator"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
 )
 
 // Item is an item that appears in the list.
@@ -212,10 +213,13 @@ func New(items []Item, delegate ItemDelegate, width, height int) Model {
 
 	filterInput := textinput.New()
 	filterInput.Prompt = "Filter: "
-	filterInput.PromptStyle = styles.FilterPrompt
-	filterInput.Cursor.Style = styles.FilterCursor
 	filterInput.CharLimit = 64
 	filterInput.Focus()
+	textInputStyles := textinput.DefaultStyles(lipgloss.HasDarkBackground(os.Stdin, os.Stdout))
+	textInputStyles.Focused.Prompt = styles.FilterPrompt
+	textInputStyles.Blurred.Prompt = styles.FilterPrompt
+	textInputStyles.Cursor.Color = lipgloss.Color("#EE6FF8")
+	filterInput.SetStyles(textInputStyles)
 
 	p := paginator.New()
 	p.Type = paginator.Dots
@@ -727,7 +731,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if key.Matches(msg, m.KeyMap.ForceQuit) {
 			return m, tea.Quit
 		}
@@ -835,7 +839,7 @@ func (m Model) FullHelp() [][]key.Binding {
 }
 
 // View renders the component.
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	var (
 		sections    []string
 		availHeight = m.height
@@ -889,7 +893,7 @@ func (m Model) View() string {
 		sections = append(sections, help)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, sections...)
+	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, sections...))
 }
 
 // Updates for when a user is browsing the list.
@@ -897,7 +901,7 @@ func (m *Model) handleBrowsing(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	numItems := len(m.VisibleItems())
 
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		// Note: we match clear filter before quit because, by default, they're
 		// both mapped to escape.
@@ -967,7 +971,7 @@ func (m *Model) handleFiltering(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	// Handle keys
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(msg, m.KeyMap.CancelWhileFiltering):
 			m.resetFiltering()
@@ -1022,8 +1026,8 @@ func (m *Model) setSize(width, height int) {
 
 	m.width = width
 	m.height = height
-	m.Help.Width = width
-	m.FilterInput.Width = width - promptWidth - lipgloss.Width(m.spinnerView())
+	m.Help.SetWidth(width)
+	m.FilterInput.SetWidth(width - promptWidth - lipgloss.Width(m.spinnerView()))
 	m.updatePagination()
 }
 

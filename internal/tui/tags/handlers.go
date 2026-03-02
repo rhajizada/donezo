@@ -5,8 +5,8 @@ import (
 
 	"github.com/rhajizada/donezo/internal/tui/styles"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
@@ -44,7 +44,7 @@ func (m *MenuModel) HandleDeleteTag(msg DeleteTagMsg) tea.Cmd {
 }
 
 // HandleKeyInput processes key inputs not handles by list.Model.
-func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
+func (m *MenuModel) HandleKeyInput(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 	if !m.List.SettingFilter() {
 		switch {

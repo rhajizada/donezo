@@ -17,7 +17,7 @@ import (
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/tui/app"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -69,7 +69,7 @@ func run() error {
 	ctx := context.Background()
 
 	m := app.New(ctx, s)
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m)
 
 	if _, programErr := p.Run(); programErr != nil {
 		return fmt.Errorf("error running program: %w", programErr)

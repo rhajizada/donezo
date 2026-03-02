@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/repository"
 	"github.com/rhajizada/donezo/internal/service"
@@ -170,13 +170,13 @@ func TestItemCreateRenameToggleTagDeleteFlow(t *testing.T) {
 	// Create item via input flow.
 	menu.InitCreateItem()
 	menu.Input.SetValue("Title")
-	model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if menu.Context.State != CreateItemDescState {
 		t.Fatalf("expected to prompt for description, got state %v", menu.Context.State)
 	}
 	menu.Input.SetValue("Desc")
-	model, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if cmd == nil {
 		t.Fatalf("expected create command")
@@ -192,13 +192,13 @@ func TestItemCreateRenameToggleTagDeleteFlow(t *testing.T) {
 	// Rename item via two-step input.
 	menu.InitRenameItem()
 	menu.Input.SetValue("New Title")
-	model, _ = menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if menu.Context.State != RenameItemDescState {
 		t.Fatalf("expected rename description state, got %v", menu.Context.State)
 	}
 	menu.Input.SetValue("New Desc")
-	model, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if cmd == nil {
 		t.Fatalf("expected rename command")
@@ -229,7 +229,7 @@ func TestItemCreateRenameToggleTagDeleteFlow(t *testing.T) {
 	// Update tags.
 	menu.InitUpdateTags()
 	menu.Input.SetValue("one, two")
-	model, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if cmd == nil {
 		t.Fatalf("expected update tags command")

@@ -4,7 +4,7 @@ import (
 	"io"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 type stubItem struct {
@@ -94,7 +94,7 @@ func TestFilteringFlowEnablesBindings(t *testing.T) {
 	m := newModel(items)
 
 	// Enter filtering mode.
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	m = model
 	if m.FilterState() != Filtering {
 		t.Fatalf("expected filtering state, got %v", m.FilterState())
@@ -104,7 +104,7 @@ func TestFilteringFlowEnablesBindings(t *testing.T) {
 	}
 
 	// Type a filter value.
-	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	model, cmd := m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	m = model
 	if cmd != nil {
 		if msg := cmd(); msg != nil {
@@ -117,7 +117,7 @@ func TestFilteringFlowEnablesBindings(t *testing.T) {
 	}
 
 	// Accept the filter.
-	model, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model
 	if m.FilterState() != FilterApplied {
 		t.Fatalf("expected filter applied after accept, got %v", m.FilterState())

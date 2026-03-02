@@ -1,6 +1,9 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
+)
 
 const (
 	appMarginVertical   = 1
@@ -14,10 +17,10 @@ var (
 		Margin(appMarginVertical, appMarginHorizontal)
 
 	StatusMessage = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#04B575", Dark: "#04B575"})
+			Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#04B575"), Dark: lipgloss.Color("#04B575")})
 
 	ErrorMessage = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#FB4A8A", Dark: "#FB4A8A"})
+			Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#FB4A8A"), Dark: lipgloss.Color("#FB4A8A")})
 
 	Item = lipgloss.NewStyle().
 		Padding(0, 0)

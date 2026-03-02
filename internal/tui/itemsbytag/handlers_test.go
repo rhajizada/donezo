@@ -3,7 +3,7 @@ package itemsbytag
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
@@ -48,7 +48,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 		menu, cleanup := newItemsByTagMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 		if cmd == nil {
 			t.Fatalf("expected command")
 		}
@@ -61,14 +61,14 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 		menu, cleanup := newItemsByTagMenu(t)
 		defer cleanup()
 
-		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+		model, _ := menu.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 		menu = model.(MenuModel)
 		if menu.Context.State != RenameItemNameState {
 			t.Fatalf("expected rename state, got %v", menu.Context.State)
 		}
 
 		menu.Context.State = DefaultState
-		model, _ = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+		model, _ = menu.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
 		menu = model.(MenuModel)
 		if menu.Context.State != UpdateTagsState {
 			t.Fatalf("expected update tags state, got %v", menu.Context.State)
@@ -79,7 +79,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 		menu, cleanup := newItemsByTagMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 		if cmd == nil {
 			t.Fatalf("expected delete cmd")
 		}
@@ -89,7 +89,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 			t.Fatalf("expected DeleteItemMsg, got %T", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'R'}})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'R', Text: "R"})
 		if cmd == nil {
 			t.Fatalf("expected refresh cmd")
 		}
@@ -99,7 +99,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 			t.Fatalf("expected ListItemsMsg, got %T", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeySpace})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
 		if cmd == nil {
 			t.Fatalf("expected toggle cmd")
 		}
@@ -109,7 +109,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 			t.Fatalf("expected ToggleItemMsg, got %T", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 		if cmd == nil {
 			t.Fatalf("expected next tag cmd")
 		}
@@ -117,7 +117,7 @@ func TestItemsByTagKeyBindings(t *testing.T) {
 			t.Fatalf("expected TagDeltaMsg +1, got %v", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 		if cmd == nil {
 			t.Fatalf("expected prev tag cmd")
 		}

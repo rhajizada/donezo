@@ -3,7 +3,7 @@ package tags
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/list"
+	"charm.land/bubbles/v2/list"
 )
 
 // Item represents item in the list.
