@@ -1,0 +1,26 @@
+version: 2
+
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      charmbracelet:
+        patterns:
+          - "github.com/charmbracelet/*"
+      dev:
+        patterns:
+          - "github.com/sqlc-dev/*"
+          - "github.com/pressly/goose*"
+          - "gotest.tools/*"
+      golang-x:
+        patterns:
+          - "golang.org/x/*"
