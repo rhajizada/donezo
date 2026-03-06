@@ -1,7 +1,8 @@
 package itemlist
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 )
 
 const (
@@ -48,8 +49,8 @@ type Styles struct {
 // TODO: styles from files
 func DefaultStyles() Styles {
 	var s Styles
-	verySubduedColor := lipgloss.AdaptiveColor{Light: "#DDDADA", Dark: "#3C3C3C"}
-	subduedColor := lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"}
+	verySubduedColor := compat.AdaptiveColor{Light: lipgloss.Color("#DDDADA"), Dark: lipgloss.Color("#3C3C3C")}
+	subduedColor := compat.AdaptiveColor{Light: lipgloss.Color("#9B9B9B"), Dark: lipgloss.Color("#5C5C5C")}
 
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, bottomPadding, leftPadding)
 
@@ -59,29 +60,29 @@ func DefaultStyles() Styles {
 		Padding(0, 1)
 
 	s.Spinner = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#8E8E8E", Dark: "#747373"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#8E8E8E"), Dark: lipgloss.Color("#747373")})
 
 	s.FilterPrompt = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#04B575", Dark: "#ECFD65"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#04B575"), Dark: lipgloss.Color("#ECFD65")})
 
 	s.FilterCursor = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#EE6FF8"), Dark: lipgloss.Color("#EE6FF8")})
 
 	s.DefaultFilterCharacterMatch = lipgloss.NewStyle().Underline(true)
 
 	s.StatusBar = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"}).
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#A49FA5"), Dark: lipgloss.Color("#777777")}).
 		Padding(0, 0, bottomPadding, leftPadding)
 
 	s.StatusEmpty = lipgloss.NewStyle().Foreground(subduedColor)
 
 	s.StatusBarActiveFilter = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#dddddd"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#1a1a1a"), Dark: lipgloss.Color("#dddddd")})
 
 	s.StatusBarFilterCount = lipgloss.NewStyle().Foreground(verySubduedColor)
 
 	s.NoItems = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#909090", Dark: "#626262"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#909090"), Dark: lipgloss.Color("#626262")})
 
 	s.ArabicPagination = lipgloss.NewStyle().Foreground(subduedColor)
 
@@ -90,7 +91,7 @@ func DefaultStyles() Styles {
 	s.HelpStyle = lipgloss.NewStyle().Padding(helpTopMargin, 0, 0, leftPadding)
 
 	s.ActivePaginationDot = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#847A85", Dark: "#979797"}).
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#847A85"), Dark: lipgloss.Color("#979797")}).
 		SetString(bullet)
 
 	s.InactivePaginationDot = lipgloss.NewStyle().

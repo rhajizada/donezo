@@ -3,7 +3,7 @@ package tags
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/testutil"
 	"github.com/rhajizada/donezo/internal/tui/navigation"
@@ -43,7 +43,7 @@ func TestTagsKeyBindings(t *testing.T) {
 		menu, cleanup := newTagMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		if cmd == nil {
 			t.Fatalf("expected command")
 		}
@@ -56,7 +56,7 @@ func TestTagsKeyBindings(t *testing.T) {
 		menu, cleanup := newTagMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 		if cmd == nil {
 			t.Fatalf("expected command")
 		}
@@ -69,7 +69,7 @@ func TestTagsKeyBindings(t *testing.T) {
 		menu, cleanup := newTagMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 		if cmd == nil {
 			t.Fatalf("expected delete command")
 		}
@@ -79,7 +79,7 @@ func TestTagsKeyBindings(t *testing.T) {
 			t.Fatalf("expected DeleteTagMsg, got %T", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'R'}})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'R', Text: "R"})
 		if cmd == nil {
 			t.Fatalf("expected refresh command")
 		}
@@ -94,7 +94,7 @@ func TestTagsKeyBindings(t *testing.T) {
 		writeClipboardText = func(data []byte) { captured = append([]byte{}, data...) }
 		defer func() { writeClipboardText = prev }()
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 		if cmd == nil {
 			t.Fatalf("expected copy command")
 		}

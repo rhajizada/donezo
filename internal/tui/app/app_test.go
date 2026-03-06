@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
@@ -69,7 +69,7 @@ func TestBoardsEscDoesNotQuit(t *testing.T) {
 	menu := boards.New(ctx, svc)
 	menu.List.SetItems(boards.NewList(&[]service.Board{*board}))
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	model, cmd := menu.Update(msg)
 	if cmd != nil {
 		// ESC on boards view should not emit a quit command.
@@ -113,7 +113,7 @@ func TestTagsEscDoesNotQuit(t *testing.T) {
 		tags.NewItem("inbox", tagCount),
 	}))
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	model, cmd := menu.Update(msg)
 	if cmd != nil {
 		if _, ok := cmd().(tea.QuitMsg); ok {
@@ -145,7 +145,7 @@ func TestBoardsTabSwitchesToTags(t *testing.T) {
 	m := New(ctx, svc)
 	m.boards.List.SetItems(boards.NewList(&[]service.Board{*board}))
 
-	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	appModel := model.(AppModel)
 	if cmd == nil {
 		t.Fatalf("expected command from tab")

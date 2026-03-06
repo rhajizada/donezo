@@ -5,9 +5,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -38,27 +39,27 @@ func NewDefaultItemStyles() DefaultItemStyles {
 	styles := DefaultItemStyles{}
 
 	styles.NormalTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#dddddd"}).
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#1a1a1a"), Dark: lipgloss.Color("#dddddd")}).
 		Padding(0, 0, 0, defaultLeftPadding)
 
 	styles.NormalDesc = styles.NormalTitle.
-		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#A49FA5"), Dark: lipgloss.Color("#777777")})
 
 	styles.SelectedTitle = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-		Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"}).
+		BorderForeground(compat.AdaptiveColor{Light: lipgloss.Color("#F793FF"), Dark: lipgloss.Color("#AD58B4")}).
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#EE6FF8"), Dark: lipgloss.Color("#EE6FF8")}).
 		Padding(0, 0, 0, 1)
 
 	styles.SelectedDesc = styles.SelectedTitle.
-		Foreground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#F793FF"), Dark: lipgloss.Color("#AD58B4")})
 
 	styles.DimmedTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"}).
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#A49FA5"), Dark: lipgloss.Color("#777777")}).
 		Padding(0, 0, 0, defaultLeftPadding)
 
 	styles.DimmedDesc = styles.DimmedTitle.
-		Foreground(lipgloss.AdaptiveColor{Light: "#C2B8C2", Dark: "#4D4D4D"})
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#C2B8C2"), Dark: lipgloss.Color("#4D4D4D")})
 
 	styles.FilterMatch = lipgloss.NewStyle().Underline(true)
 

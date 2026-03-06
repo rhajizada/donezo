@@ -5,9 +5,9 @@ import (
 
 	"github.com/rhajizada/donezo/internal/tui/styles"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
@@ -16,6 +16,7 @@ import (
 func (m *MenuModel) HandleWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
 	h, v := styles.App.GetFrameSize()
 	m.List.SetSize(msg.Width-h, msg.Height-v)
+	m.Input.SetWidth(msg.Width - h)
 	return nil
 }
 
@@ -114,9 +115,8 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	// Only handle key messages in input states
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		//nolint:exhaustive // Only a subset of key types is handled.
-		switch keyMsg.Type {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+		switch keyMsg.Code {
 		case tea.KeyEnter:
 			switch m.Context.State {
 			case RenameItemNameState:
@@ -127,6 +127,7 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 				if selectedOK {
 					m.Input.Placeholder = selected.Itm.Description
 					m.Input.SetValue(selected.Itm.Description)
+					m.Input.CursorEnd()
 					m.Input.Focus()
 				}
 			case RenameItemDescState:
@@ -157,7 +158,7 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 }
 
 // HandleKeyInput processes key inputs not handles by list.Model.
-func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
+func (m *MenuModel) HandleKeyInput(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 	if m.List.SettingFilter() {
 		return nil

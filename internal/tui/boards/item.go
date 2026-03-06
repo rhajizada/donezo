@@ -1,7 +1,7 @@
 package boards
 
 import (
-	"github.com/charmbracelet/bubbles/list"
+	"charm.land/bubbles/v2/list"
 
 	"github.com/rhajizada/donezo/internal/service"
 )

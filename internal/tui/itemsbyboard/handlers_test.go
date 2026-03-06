@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/repository"
 	"github.com/rhajizada/donezo/internal/service"
@@ -42,7 +42,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 		if cmd == nil {
 			t.Fatalf("expected command")
 		}
@@ -55,7 +55,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
-		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+		model, _ := menu.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 		menu = model.(MenuModel)
 		if menu.Context.State != CreateItemNameState {
 			t.Fatalf("expected create name state, got %v", menu.Context.State)
@@ -66,14 +66,14 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
-		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+		model, _ := menu.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 		menu = model.(MenuModel)
 		if menu.Context.State != RenameItemNameState {
 			t.Fatalf("expected rename name state, got %v", menu.Context.State)
 		}
 
 		menu.Context.State = DefaultState
-		model, _ = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+		model, _ = menu.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
 		menu = model.(MenuModel)
 		if menu.Context.State != UpdateTagsState {
 			t.Fatalf("expected update tags state, got %v", menu.Context.State)
@@ -84,7 +84,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 		if cmd == nil {
 			t.Fatalf("expected delete command")
 		}
@@ -94,7 +94,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 			t.Fatalf("expected DeleteItemMsg, got %T", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'R'}})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'R', Text: "R"})
 		if cmd == nil {
 			t.Fatalf("expected refresh command")
 		}
@@ -109,7 +109,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		menu, cleanup := newItemMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeySpace})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
 		if cmd == nil {
 			t.Fatalf("expected toggle command")
 		}
@@ -119,7 +119,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 			t.Fatalf("expected ToggleItemMsg, got %T", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 		if cmd == nil {
 			t.Fatalf("expected next board command")
 		}
@@ -127,7 +127,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 			t.Fatalf("expected BoardDeltaMsg +1, got %v", msg)
 		}
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 		if cmd == nil {
 			t.Fatalf("expected previous board command")
 		}
@@ -145,7 +145,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		writeClipboardText = func(data []byte) { captured = append([]byte{}, data...) }
 		defer func() { writeClipboardText = prevWrite }()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 		if cmd == nil {
 			t.Fatalf("expected copy cmd")
 		}
@@ -165,7 +165,7 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		readClipboardText = func() []byte { return data }
 		defer func() { readClipboardText = prevRead }()
 
-		_, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 		if cmd == nil {
 			t.Fatalf("expected paste cmd")
 		}

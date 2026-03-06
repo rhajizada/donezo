@@ -1,7 +1,7 @@
 package app
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/tui/boards"
 	"github.com/rhajizada/donezo/internal/tui/itemsbyboard"

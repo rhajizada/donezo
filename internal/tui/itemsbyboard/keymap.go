@@ -1,6 +1,6 @@
 package itemsbyboard
 
-import "github.com/charmbracelet/bubbles/key"
+import "charm.land/bubbles/v2/key"
 
 type Keymap struct {
 	Back           key.Binding
@@ -44,7 +44,7 @@ func NewKeymap() *Keymap {
 			key.WithHelp("R", "refresh board"),
 		),
 		ToggleComplete: key.NewBinding(
-			key.WithKeys(" "),
+			key.WithKeys("space"),
 			key.WithHelp("space", "toggle complete"),
 		),
 		Copy: key.NewBinding(

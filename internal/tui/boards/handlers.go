@@ -5,9 +5,9 @@ import (
 
 	"github.com/rhajizada/donezo/internal/tui/styles"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/tui/navigation"
 )
@@ -87,9 +87,8 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	// Only handle key messages in input states
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		//nolint:exhaustive // We only care about a subset of key types here.
-		switch keyMsg.Type {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+		switch keyMsg.Code {
 		case tea.KeyEnter:
 			switch m.State {
 			case CreateBoardState:
@@ -116,7 +115,7 @@ func (m *MenuModel) HandleInputState(msg tea.Msg) (textinput.Model, []tea.Cmd) {
 }
 
 // HandleKeyInput processes key inputs not handles by list.Model.
-func (m *MenuModel) HandleKeyInput(msg tea.KeyMsg) tea.Cmd {
+func (m *MenuModel) HandleKeyInput(msg tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 	if !m.List.SettingFilter() && m.State == DefaultState {
 		switch {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"golang.design/x/clipboard"
 
 	"github.com/rhajizada/donezo/internal/service"
@@ -82,7 +82,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.HandleWindowSize(msg)
 		cmds = append(cmds, cmd)
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		cmd := m.HandleKeyInput(msg)
 		cmds = append(cmds, cmd)
 
@@ -100,7 +100,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.Type == tea.KeyEsc {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && keyMsg.Code == tea.KeyEsc {
 		return m, tea.Batch(cmds...)
 	}
 

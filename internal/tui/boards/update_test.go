@@ -3,7 +3,7 @@ package boards
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
@@ -69,7 +69,7 @@ func TestBoardCreateRenameDeleteFlow(t *testing.T) {
 	// Create
 	menu.InitCreateBoard()
 	menu.Input.SetValue("Projects")
-	model, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if cmd != nil {
 		if msg := cmd(); msg != nil {
@@ -88,7 +88,7 @@ func TestBoardCreateRenameDeleteFlow(t *testing.T) {
 	// Rename
 	menu.InitRenameBoard()
 	menu.Input.SetValue("Renamed")
-	model, cmd = menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	menu = model.(MenuModel)
 	if cmd != nil {
 		if msg := cmd(); msg != nil {

@@ -10,7 +10,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/styles"
 	"github.com/rhajizada/donezo/internal/tui/tags"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func (m *MenuModel) selectedItem() (Item, bool) {
@@ -99,6 +99,7 @@ func (m *MenuModel) InitRenameItem() tea.Cmd {
 	selected, ok := m.selectedItem()
 	if ok {
 		m.Input.SetValue(selected.Itm.Title)
+		m.Input.CursorEnd()
 	}
 	m.Input.Focus()
 	return nil
@@ -112,6 +113,7 @@ func (m *MenuModel) InitUpdateTags() tea.Cmd {
 	if ok {
 		dSep := fmt.Sprintf(" %s", helpers.TagsSeparator)
 		m.Input.SetValue(strings.Join(selected.Itm.Tags, dSep))
+		m.Input.CursorEnd()
 	}
 	m.Input.Focus()
 	return nil
@@ -162,7 +164,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.HandleWindowSize(msg)
 		cmds = append(cmds, cmd)
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		cmd := m.HandleKeyInput(msg)
 		cmds = append(cmds, cmd)
 

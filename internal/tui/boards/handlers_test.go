@@ -3,7 +3,7 @@ package boards
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
@@ -30,7 +30,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
-		model, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		model, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		if cmd == nil {
 			t.Fatalf("expected command for enter")
 		}
@@ -48,7 +48,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 		if cmd == nil {
 			t.Fatalf("expected command for tab")
 		}
@@ -61,14 +61,14 @@ func TestBoardsKeyBindings(t *testing.T) {
 		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
-		model, _ := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+		model, _ := menu.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 		menu = model.(MenuModel)
 		if menu.State != CreateBoardState {
 			t.Fatalf("expected create state, got %v", menu.State)
 		}
 
 		menu.State = DefaultState
-		model, _ = menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+		model, _ = menu.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 		menu = model.(MenuModel)
 		if menu.State != RenameBoardState {
 			t.Fatalf("expected rename state, got %v", menu.State)
@@ -79,7 +79,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 		if cmd == nil {
 			t.Fatalf("expected delete command")
 		}
@@ -94,7 +94,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'R'}})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'R', Text: "R"})
 		if cmd == nil {
 			t.Fatalf("expected refresh command")
 		}
@@ -114,7 +114,7 @@ func TestBoardsKeyBindings(t *testing.T) {
 		writeClipboardText = func(data []byte) { captured = append([]byte{}, data...) }
 		defer func() { writeClipboardText = prev }()
 
-		_, cmd := menu.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 		if cmd == nil {
 			t.Fatalf("expected copy command")
 		}

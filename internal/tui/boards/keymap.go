@@ -1,7 +1,7 @@
 package boards
 
 import (
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 )
 
 // Keymap embeds default list keymap and adds other Binding.
