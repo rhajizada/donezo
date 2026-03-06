@@ -16,17 +16,31 @@ repos:
       - id: check-merge-conflict
       - id: check-symlinks
       - id: detect-private-key
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v2.10.1
-    hooks:
-      - id: golangci-lint-full
-      - id: golangci-lint-fmt
-      - id: golangci-lint-config-verify
   - repo: local
     hooks:
+      - id: golangci-lint-full
+        name: golangci-lint-full
+        language: system
+        pass_filenames: false
+        require_serial: true
+        types: [go]
+        entry: golangci-lint run --fix
+      - id: golangci-lint-fmt
+        name: golangci-lint-fmt
+        language: system
+        pass_filenames: false
+        require_serial: true
+        types: [go]
+        entry: golangci-lint fmt
+      - id: golangci-lint-config-verify
+        name: golangci-lint-config-verify
+        language: system
+        pass_filenames: false
+        files: '\.golangci\.(?:yml|yaml|toml|json)'
+        entry: golangci-lint config verify
       - id: gotestsum
         name: run go tests
-        language: golang
+        language: system
         pass_filenames: false
         types: [go]
-        entry: bash -c 'go tool gotestsum'
+        entry: go tool gotestsum

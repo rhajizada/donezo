@@ -11,7 +11,7 @@ import (
 	"github.com/rhajizada/donezo/internal/tui/tags"
 )
 
-func newItemsByTagMenu(t *testing.T) (itemsbytag.MenuModel, *service.Service, func()) {
+func newItemsByTagMenu(t *testing.T) (itemsbytag.MenuModel, func()) {
 	t.Helper()
 	svc, cleanup := testutil.NewTestService(t)
 	ctx := testutil.MustContext()
@@ -41,11 +41,11 @@ func newItemsByTagMenu(t *testing.T) (itemsbytag.MenuModel, *service.Service, fu
 	menu := itemsbytag.New(ctx, svc, &parent)
 	menu.List.SetItems(itemsbytag.NewList(&[]service.Item{*item}))
 	menu.List.Select(0)
-	return menu, svc, cleanup
+	return menu, cleanup
 }
 
 func TestListItemsWithoutSelectedTagReturnsErrorMsg(t *testing.T) {
-	menu, _, cleanup := newItemsByTagMenu(t)
+	menu, cleanup := newItemsByTagMenu(t)
 	defer cleanup()
 
 	menu.Parent.List.SetItems(tags.NewList(nil))
@@ -57,7 +57,7 @@ func TestListItemsWithoutSelectedTagReturnsErrorMsg(t *testing.T) {
 }
 
 func TestRenameUpdateTagsAndToggleCommands(t *testing.T) {
-	menu, _, cleanup := newItemsByTagMenu(t)
+	menu, cleanup := newItemsByTagMenu(t)
 	defer cleanup()
 
 	menu.Context.Title = "renamed"
@@ -99,7 +99,7 @@ func TestRenameUpdateTagsAndToggleCommands(t *testing.T) {
 }
 
 func TestUpdateTagsValidationError(t *testing.T) {
-	menu, _, cleanup := newItemsByTagMenu(t)
+	menu, cleanup := newItemsByTagMenu(t)
 	defer cleanup()
 
 	menu.Context.Title = "ok, "
@@ -114,7 +114,7 @@ func TestUpdateTagsValidationError(t *testing.T) {
 }
 
 func TestHandleInputStateTransitions(t *testing.T) {
-	menu, _, cleanup := newItemsByTagMenu(t)
+	menu, cleanup := newItemsByTagMenu(t)
 	defer cleanup()
 
 	menu.Context.State = itemsbytag.RenameItemNameState
@@ -151,7 +151,7 @@ func TestHandleInputStateTransitions(t *testing.T) {
 }
 
 func TestUpdateWithListItemsMsgReplacesList(t *testing.T) {
-	menu, _, cleanup := newItemsByTagMenu(t)
+	menu, cleanup := newItemsByTagMenu(t)
 	defer cleanup()
 
 	newItems := &[]service.Item{{Item: service.Item{}.Item, Tags: []string{"x"}}}

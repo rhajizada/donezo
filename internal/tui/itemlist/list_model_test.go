@@ -27,6 +27,7 @@ type extDelegate struct {
 func (d extDelegate) Render(w io.Writer, _ itemlist.Model, _ int, item itemlist.Item) {
 	fmt.Fprint(w, item.FilterValue())
 }
+
 func (d extDelegate) Height() int {
 	if d.height == 0 {
 		return 1
@@ -199,7 +200,8 @@ func TestFiltersAndStateString(t *testing.T) {
 		t.Fatalf("expected at least one rank")
 	}
 
-	if itemlist.Unfiltered.String() == "" || itemlist.Filtering.String() == "" || itemlist.FilterApplied.String() == "" {
+	if itemlist.Unfiltered.String() == "" || itemlist.Filtering.String() == "" ||
+		itemlist.FilterApplied.String() == "" {
 		t.Fatalf("expected non-empty filter state strings")
 	}
 }

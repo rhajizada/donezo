@@ -18,7 +18,7 @@ func TestListItemsByTagListTagsAndDeleteTag(t *testing.T) {
 	itemB := mustCreateItem(ctx, t, svc, board, "b", "second")
 
 	itemA.Tags = []string{"work", "go"}
-	itemA = mustUpdateItem(ctx, t, svc, itemA)
+	_ = mustUpdateItem(ctx, t, svc, itemA)
 	itemB.Tags = []string{"work"}
 	_ = mustUpdateItem(ctx, t, svc, itemB)
 
