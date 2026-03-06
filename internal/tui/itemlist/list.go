@@ -6,7 +6,6 @@ package itemlist
 import (
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -215,7 +214,7 @@ func New(items []Item, delegate ItemDelegate, width, height int) Model {
 	filterInput.Prompt = "Filter: "
 	filterInput.CharLimit = 64
 	filterInput.Focus()
-	textInputStyles := textinput.DefaultStyles(lipgloss.HasDarkBackground(os.Stdin, os.Stdout))
+	textInputStyles := textinput.DefaultDarkStyles()
 	textInputStyles.Focused.Prompt = styles.FilterPrompt
 	textInputStyles.Blurred.Prompt = styles.FilterPrompt
 	textInputStyles.Cursor.Color = lipgloss.Color("#EE6FF8")
