@@ -16,6 +16,7 @@ import (
 func (m *MenuModel) HandleWindowSize(msg tea.WindowSizeMsg) tea.Cmd {
 	h, v := styles.App.GetFrameSize()
 	m.List.SetSize(msg.Width-h, msg.Height-v)
+	m.Input.SetWidth(msg.Width - h)
 	return nil
 }
 

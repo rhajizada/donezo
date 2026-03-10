@@ -8,6 +8,7 @@ import (
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
 	"github.com/rhajizada/donezo/internal/tui/navigation"
+	"github.com/rhajizada/donezo/internal/tui/styles"
 )
 
 func newBoardMenu(t *testing.T) (MenuModel, func()) {
@@ -26,6 +27,21 @@ func newBoardMenu(t *testing.T) (MenuModel, func()) {
 
 //nolint:gocognit // covering multiple keybinding branches
 func TestBoardsKeyBindings(t *testing.T) {
+	t.Run("window resize updates input width", func(t *testing.T) {
+		menu, cleanup := newBoardMenu(t)
+		defer cleanup()
+
+		width := 120
+		model, _ := menu.Update(tea.WindowSizeMsg{Width: width, Height: 40})
+		menu = model.(MenuModel)
+
+		h, _ := styles.App.GetFrameSize()
+		expected := width - h
+		if menu.Input.Width() != expected {
+			t.Fatalf("expected input width %d, got %d", expected, menu.Input.Width())
+		}
+	})
+
 	t.Run("enter opens items", func(t *testing.T) {
 		menu, cleanup := newBoardMenu(t)
 		defer cleanup()
