@@ -106,7 +106,7 @@ jobs:
           fi
           case "$coverage_int" in
             9[5-9]|100) color="brightgreen" ;;
-            8[5-9]) color="green" ;;
+            8[0-9]) color="green" ;;
             7[0-9]) color="yellowgreen" ;;
             5[0-9]) color="yellow" ;;
             3[0-9]|4[0-9]) color="orange" ;;
