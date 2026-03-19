@@ -105,11 +105,12 @@ jobs:
             exit 1
           fi
           case "$coverage_int" in
-            9[5-9]|100) color="brightgreen" ;;
-            8[5-9]) color="green" ;;
+            100|9[5-9]) color="brightgreen" ;;
+            8[0-9]|9[0-4]) color="green" ;;
             7[0-9]) color="yellowgreen" ;;
-            5[0-9]) color="yellow" ;;
+            5[0-9]|6[0-9]) color="yellow" ;;
             3[0-9]|4[0-9]) color="orange" ;;
+            [0-9]|1[0-9]|2[0-9]) color="red" ;;
             *) color="red" ;;
           esac
           echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
