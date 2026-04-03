@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build_version: ${{ steps.env.outputs.build_version }}
-      is_release: ${{ steps.env.outputs.is_release }}
+      release: ${{ steps.env.outputs.release }}
     steps:
       - name: Determine versions
         id: env
@@ -28,13 +28,13 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then
             version="${{ github.ref_name }}"
             build_version="${version#v}"
-            is_release=true
+            release=true
           else
             build_version="${GITHUB_SHA::7}"
-            is_release=false
+            release=false
           fi
           echo "build_version=$build_version" >> "$GITHUB_OUTPUT"
-          echo "is_release=$is_release" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
 
   test:
     name: Test
@@ -197,7 +197,7 @@ jobs:
   release:
     name: Release
     needs: [env, build]
-    if: ${{ needs.env.outputs.is_release == 'true' }}
+    if: needs.env.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
