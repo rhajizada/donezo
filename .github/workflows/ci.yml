@@ -78,7 +78,7 @@ jobs:
         if: ${{ always() && !(github.ref == 'refs/heads/main' && github.event_name == 'push') }}
 
       - name: Run coverage
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        if: github.ref == 'refs/heads/main'
         run: |
           set -euo pipefail
           mod="$(go list -m -f '{{.Path}}')"
@@ -95,7 +95,7 @@ jobs:
 
       - name: Parse coverage
         id: coverage
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        if: github.ref == 'refs/heads/main'
         run: |
           coverage="$(go tool cover -func=coverage.out | awk '/^total:/{print $3}')"
           coverage_value="${coverage%\%}"
@@ -117,7 +117,7 @@ jobs:
           echo "color=$color" >> "$GITHUB_OUTPUT"
 
       - name: Update badge
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        if: github.ref == 'refs/heads/main'
         env:
           SIGNUM_BADGE_ID: ${{ vars.SIGNUM_BADGE_ID }}
           SIGNUM_BADGE_TOKEN: ${{ secrets.SIGNUM_BADGE_TOKEN }}
