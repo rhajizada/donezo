@@ -39,7 +39,7 @@ repos:
         files: '\.golangci\.(?:yml|yaml|toml|json)'
         entry: golangci-lint config verify
       - id: gotestsum
-        name: run go tests
+        name: gotestsum
         language: system
         pass_filenames: false
         types: [go]

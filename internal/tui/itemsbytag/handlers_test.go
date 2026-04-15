@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
@@ -18,18 +20,12 @@ func newItemsByTagMenu(t *testing.T) (MenuModel, func()) {
 	var err error
 
 	board, err := svc.CreateBoard(ctx, "Inbox")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
-	}
+	require.NoError(t, err)
 	item, err := svc.CreateItem(ctx, board, "task", "desc")
-	if err != nil {
-		t.Fatalf("CreateItem: %v", err)
-	}
+	require.NoError(t, err)
 	item.Tags = []string{"work"}
 	_, err = svc.UpdateItem(ctx, item)
-	if err != nil {
-		t.Fatalf("UpdateItem: %v", err)
-	}
+	require.NoError(t, err)
 
 	tagCount, _ := svc.CountItemsByTag(ctx, "work")
 	parent := tags.NewModel(ctx, svc)
@@ -42,87 +38,100 @@ func newItemsByTagMenu(t *testing.T) (MenuModel, func()) {
 	return menu, cleanup
 }
 
-//nolint:gocognit // covering keybinding branches
 func TestItemsByTagKeyBindings(t *testing.T) {
-	t.Run("back sends BackMsg", func(t *testing.T) {
-		menu, cleanup := newItemsByTagMenu(t)
-		defer cleanup()
+	tests := []struct {
+		name        string
+		msg         tea.KeyPressMsg
+		prepare     func(*MenuModel)
+		assertModel func(*testing.T, MenuModel)
+		assertCmd   func(*testing.T, tea.Cmd)
+	}{
+		{
+			name: "back sends back message",
+			msg:  tea.KeyPressMsg{Code: tea.KeyBackspace},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.BackMsg{}, cmd())
+			},
+		},
+		{
+			name: "rename enters rename state",
+			msg:  tea.KeyPressMsg{Code: 'r', Text: "r"},
+			assertModel: func(t *testing.T, menu MenuModel) {
+				assert.Equal(t, RenameItemNameState, menu.Context.State)
+			},
+		},
+		{
+			name: "update tags enters update tags state",
+			msg:  tea.KeyPressMsg{Code: 't', Text: "t"},
+			prepare: func(menu *MenuModel) {
+				menu.Context.State = DefaultState
+			},
+			assertModel: func(t *testing.T, menu MenuModel) {
+				assert.Equal(t, UpdateTagsState, menu.Context.State)
+			},
+		},
+		{
+			name: "delete sends delete message",
+			msg:  tea.KeyPressMsg{Code: 'd', Text: "d"},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(DeleteItemMsg)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "refresh sends list items message",
+			msg:  tea.KeyPressMsg{Code: 'R', Text: "R"},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(ListItemsMsg)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "space toggles item",
+			msg:  tea.KeyPressMsg{Code: tea.KeySpace, Text: " "},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(ToggleItemMsg)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "tab moves to next tag",
+			msg:  tea.KeyPressMsg{Code: tea.KeyTab},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.TagDeltaMsg{Delta: 1}, cmd())
+			},
+		},
+		{
+			name: "shift tab moves to previous tag",
+			msg:  tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.TagDeltaMsg{Delta: -1}, cmd())
+			},
+		},
+	}
 
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
-		if cmd == nil {
-			t.Fatalf("expected command")
-		}
-		if msg := cmd(); msg != (navigation.BackMsg{}) {
-			t.Fatalf("expected BackMsg, got %v", msg)
-		}
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			menu, cleanup := newItemsByTagMenu(t)
+			defer cleanup()
+			if tt.prepare != nil {
+				tt.prepare(&menu)
+			}
 
-	t.Run("rename and update tags enter states", func(t *testing.T) {
-		menu, cleanup := newItemsByTagMenu(t)
-		defer cleanup()
-
-		model, _ := menu.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
-		menu = model.(MenuModel)
-		if menu.Context.State != RenameItemNameState {
-			t.Fatalf("expected rename state, got %v", menu.Context.State)
-		}
-
-		menu.Context.State = DefaultState
-		model, _ = menu.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
-		menu = model.(MenuModel)
-		if menu.Context.State != UpdateTagsState {
-			t.Fatalf("expected update tags state, got %v", menu.Context.State)
-		}
-	})
-
-	t.Run("delete, refresh, toggle, navigation", func(t *testing.T) {
-		menu, cleanup := newItemsByTagMenu(t)
-		defer cleanup()
-
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
-		if cmd == nil {
-			t.Fatalf("expected delete cmd")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected DeleteItemMsg")
-		} else if _, ok := msg.(DeleteItemMsg); !ok {
-			t.Fatalf("expected DeleteItemMsg, got %T", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'R', Text: "R"})
-		if cmd == nil {
-			t.Fatalf("expected refresh cmd")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected ListItemsMsg")
-		} else if _, ok := msg.(ListItemsMsg); !ok {
-			t.Fatalf("expected ListItemsMsg, got %T", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
-		if cmd == nil {
-			t.Fatalf("expected toggle cmd")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected ToggleItemMsg")
-		} else if _, ok := msg.(ToggleItemMsg); !ok {
-			t.Fatalf("expected ToggleItemMsg, got %T", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-		if cmd == nil {
-			t.Fatalf("expected next tag cmd")
-		}
-		if msg := cmd(); msg != (navigation.TagDeltaMsg{Delta: 1}) {
-			t.Fatalf("expected TagDeltaMsg +1, got %v", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
-		if cmd == nil {
-			t.Fatalf("expected prev tag cmd")
-		}
-		if msg := cmd(); msg != (navigation.TagDeltaMsg{Delta: -1}) {
-			t.Fatalf("expected TagDeltaMsg -1, got %v", msg)
-		}
-	})
+			model, cmd := menu.Update(tt.msg)
+			menu = model.(MenuModel)
+			if tt.assertModel != nil {
+				tt.assertModel(t, menu)
+			}
+			if tt.assertCmd != nil {
+				tt.assertCmd(t, cmd)
+			}
+		})
+	}
 }

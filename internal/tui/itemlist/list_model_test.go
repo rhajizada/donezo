@@ -3,10 +3,11 @@ package itemlist_test
 import (
 	"fmt"
 	"io"
-	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/tui/itemlist"
 )
@@ -44,164 +45,122 @@ func newModel(items []itemlist.Item) itemlist.Model {
 }
 
 func TestPublicSettersAndGetters(t *testing.T) {
-	m := newModel([]itemlist.Item{extItem{title: "a"}})
+	tests := []struct{ name string }{{name: "public setters mutate model state"}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel([]itemlist.Item{extItem{title: "a"}})
+			m.SetShowTitle(false)
+			m.SetShowFilter(false)
+			m.SetShowStatusBar(false)
+			m.SetShowPagination(false)
+			m.SetShowHelp(false)
+			m.SetFilteringEnabled(true)
+			m.SetStatusBarItemName("task", "tasks")
+			m.SetSize(70, 15)
 
-	m.SetShowTitle(false)
-	m.SetShowFilter(false)
-	m.SetShowStatusBar(false)
-	m.SetShowPagination(false)
-	m.SetShowHelp(false)
-	m.SetFilteringEnabled(true)
-	m.SetStatusBarItemName("task", "tasks")
-	m.SetSize(70, 15)
-
-	if m.ShowTitle() {
-		t.Fatalf("expected title hidden")
-	}
-	if m.ShowFilter() {
-		t.Fatalf("expected filter hidden")
-	}
-	if m.ShowStatusBar() {
-		t.Fatalf("expected status bar hidden")
-	}
-	if m.ShowPagination() {
-		t.Fatalf("expected pagination hidden")
-	}
-	if m.ShowHelp() {
-		t.Fatalf("expected help hidden")
-	}
-	if !m.FilteringEnabled() {
-		t.Fatalf("expected filtering enabled")
-	}
-	singular, plural := m.StatusBarItemName()
-	if singular != "task" || plural != "tasks" {
-		t.Fatalf("unexpected status names: %q, %q", singular, plural)
-	}
-	if m.Width() != 70 || m.Height() != 15 {
-		t.Fatalf("unexpected size %dx%d", m.Width(), m.Height())
+			assert.False(t, m.ShowTitle())
+			assert.False(t, m.ShowFilter())
+			assert.False(t, m.ShowStatusBar())
+			assert.False(t, m.ShowPagination())
+			assert.False(t, m.ShowHelp())
+			assert.True(t, m.FilteringEnabled())
+			singular, plural := m.StatusBarItemName()
+			assert.Equal(t, "task", singular)
+			assert.Equal(t, "tasks", plural)
+			assert.Equal(t, 70, m.Width())
+			assert.Equal(t, 15, m.Height())
+		})
 	}
 }
 
 func TestItemMutationAndSelection(t *testing.T) {
-	m := newModel([]itemlist.Item{extItem{title: "a"}, extItem{title: "b"}})
-
-	m.InsertItem(1, extItem{title: "inserted"})
-	if len(m.Items()) != 3 {
-		t.Fatalf("expected 3 items, got %d", len(m.Items()))
-	}
-
-	m.SetItem(0, extItem{title: "first"})
-	m.Select(1)
-	if m.Index() != 1 || m.GlobalIndex() != 1 {
-		t.Fatalf("unexpected selected index local=%d global=%d", m.Index(), m.GlobalIndex())
-	}
-
-	m.RemoveItem(1)
-	if len(m.Items()) != 2 {
-		t.Fatalf("expected 2 items after remove, got %d", len(m.Items()))
-	}
-
-	m.ResetSelected()
-	selected := m.SelectedItem()
-	if selected == nil {
-		t.Fatalf("expected selected item after reset")
+	tests := []struct{ name string }{{name: "item mutations preserve selection invariants"}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel([]itemlist.Item{extItem{title: "a"}, extItem{title: "b"}})
+			m.InsertItem(1, extItem{title: "inserted"})
+			assert.Len(t, m.Items(), 3)
+			m.SetItem(0, extItem{title: "first"})
+			m.Select(1)
+			assert.Equal(t, 1, m.Index())
+			assert.Equal(t, 1, m.GlobalIndex())
+			m.RemoveItem(1)
+			assert.Len(t, m.Items(), 2)
+			m.ResetSelected()
+			assert.NotNil(t, m.SelectedItem())
+		})
 	}
 }
 
 func TestCursorPagingAndInfiniteScrolling(t *testing.T) {
-	items := []itemlist.Item{
-		extItem{title: "1"},
-		extItem{title: "2"},
-		extItem{title: "3"},
+	tests := []struct{ name string }{{name: "cursor wraps with infinite scrolling"}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			items := []itemlist.Item{extItem{title: "1"}, extItem{title: "2"}, extItem{title: "3"}}
+			m := itemlist.New(items, extDelegate{height: 1, spacing: 0}, 40, 2)
+			m.InfiniteScrolling = true
+			m.CursorUp()
+			assert.Equal(t, len(items)-1, m.Index())
+			m.CursorDown()
+			assert.Equal(t, 0, m.Index())
+			m.NextPage()
+			m.PrevPage()
+		})
 	}
-	m := itemlist.New(items, extDelegate{height: 1, spacing: 0}, 40, 2)
-	m.InfiniteScrolling = true
-
-	m.CursorUp()
-	if m.Index() != len(items)-1 {
-		t.Fatalf("expected wrap to last item, got index %d", m.Index())
-	}
-
-	m.CursorDown()
-	if m.Index() != 0 {
-		t.Fatalf("expected wrap to first item, got index %d", m.Index())
-	}
-
-	m.NextPage()
-	m.PrevPage()
 }
 
 func TestFilterStatesAndHideFlow(t *testing.T) {
-	m := newModel([]itemlist.Item{
-		extItem{title: "alpha"},
-		extItem{title: "beta", hidden: true},
-	})
-
-	m.SetFilterText("alpha")
-	if m.FilterState() != itemlist.FilterApplied {
-		t.Fatalf("expected filter applied, got %v", m.FilterState())
-	}
-	if !m.IsFiltered() {
-		t.Fatalf("expected filtered state")
-	}
-	if m.FilterValue() != "alpha" {
-		t.Fatalf("unexpected filter value %q", m.FilterValue())
-	}
-
-	m.ToggleHide()
-	visible := m.VisibleItems()
-	if len(visible) != 1 {
-		t.Fatalf("expected 1 visible item after hide toggle, got %d", len(visible))
-	}
-
-	m.ResetFilter()
-	if m.FilterState() != itemlist.Unfiltered {
-		t.Fatalf("expected unfiltered state, got %v", m.FilterState())
+	tests := []struct{ name string }{{name: "filter state and hide flow update model"}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel([]itemlist.Item{extItem{title: "alpha"}, extItem{title: "beta", hidden: true}})
+			m.SetFilterText("alpha")
+			assert.Equal(t, itemlist.FilterApplied, m.FilterState())
+			assert.True(t, m.IsFiltered())
+			assert.Equal(t, "alpha", m.FilterValue())
+			m.ToggleHide()
+			assert.Len(t, m.VisibleItems(), 1)
+			m.ResetFilter()
+			assert.Equal(t, itemlist.Unfiltered, m.FilterState())
+		})
 	}
 }
 
 func TestSpinnerBindingsHelpAndView(t *testing.T) {
-	m := newModel([]itemlist.Item{extItem{title: "alpha"}})
-
-	if !m.KeyMap.Quit.Enabled() {
-		t.Fatalf("expected quit binding enabled by default")
-	}
-	m.DisableQuitKeybindings()
-	if m.KeyMap.Quit.Enabled() {
-		t.Fatalf("expected quit binding disabled")
-	}
-
-	if cmd := m.StartSpinner(); cmd == nil {
-		t.Fatalf("expected start spinner command")
-	}
-	if cmd := m.ToggleSpinner(); cmd != nil {
-		t.Fatalf("expected nil toggle command when stopping spinner")
-	}
-	m.StopSpinner()
-
-	short := m.ShortHelp()
-	full := m.FullHelp()
-	if len(short) == 0 || len(full) == 0 {
-		t.Fatalf("expected help bindings to be available")
-	}
-
-	view := m.View().Content
-	if view == "" {
-		t.Fatalf("expected non-empty view content")
-	}
-	if !strings.Contains(view, "alpha") {
-		t.Fatalf("expected item title in view, got %q", view)
+	tests := []struct{ name string }{{name: "spinner and help APIs remain usable"}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel([]itemlist.Item{extItem{title: "alpha"}})
+			assert.True(t, m.KeyMap.Quit.Enabled())
+			m.DisableQuitKeybindings()
+			assert.False(t, m.KeyMap.Quit.Enabled())
+			require.NotNil(t, m.StartSpinner())
+			assert.Nil(t, m.ToggleSpinner())
+			m.StopSpinner()
+			assert.NotEmpty(t, m.ShortHelp())
+			assert.NotEmpty(t, m.FullHelp())
+			view := m.View().Content
+			assert.NotEmpty(t, view)
+			assert.Contains(t, view, "alpha")
+		})
 	}
 }
 
 func TestFiltersAndStateString(t *testing.T) {
-	ranks := itemlist.UnsortedFilter("a", []string{"ba", "ab"})
-	if len(ranks) == 0 {
-		t.Fatalf("expected at least one rank")
+	tests := []struct {
+		name  string
+		state itemlist.FilterState
+	}{
+		{name: "unfiltered string", state: itemlist.Unfiltered},
+		{name: "filtering string", state: itemlist.Filtering},
+		{name: "filter applied string", state: itemlist.FilterApplied},
 	}
 
-	if itemlist.Unfiltered.String() == "" || itemlist.Filtering.String() == "" ||
-		itemlist.FilterApplied.String() == "" {
-		t.Fatalf("expected non-empty filter state strings")
+	ranks := itemlist.UnsortedFilter("a", []string{"ba", "ab"})
+	assert.NotEmpty(t, ranks)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.NotEmpty(t, tt.state.String())
+		})
 	}
 }

@@ -55,11 +55,9 @@ test:
 .PHONY: coverage
 coverage:
 	@set -euo pipefail; \
-	mod="$$(go list -m -f '{{.Path}}')"; \
-	go list ./... \
-		| grep -vE '/(docs|vendor|mocks|testdata|internal/repository|internal/testutil)(/|$$)' \
-		| grep -vFx "$$mod" \
-		| xargs go tool gotestsum -- -coverprofile=coverage.out > /dev/null; \
+	packages="$$(go list ./... | grep -vE '^github.com/rhajizada/donezo/(cmd($$|/)|docs$$|internal/testutil$$)')"; \
+	coverpkg="$$(printf "%s" "$$packages" | tr "\n" "," | sed 's/,$$//')"; \
+	go tool gotestsum -- -coverpkg="$$coverpkg" -coverprofile=coverage.out $$packages > /dev/null; \
 	go tool cover -func=coverage.out
 
 

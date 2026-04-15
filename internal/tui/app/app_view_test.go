@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/testutil"
 	"github.com/rhajizada/donezo/internal/tui/app"
@@ -11,37 +13,53 @@ import (
 )
 
 func TestAppInitAndView(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	ctx := testutil.MustContext()
-	m := app.New(ctx, svc)
-
-	initCmd := m.Init()
-	if initCmd == nil {
-		t.Fatalf("expected init command")
-	}
-	if msg := initCmd(); msg == nil {
-		t.Fatalf("expected init message")
-	} else if _, ok := msg.(boards.ListBoardsMsg); !ok {
-		t.Fatalf("expected boards.ListBoardsMsg, got %T", msg)
+	tests := []struct {
+		name string
+	}{
+		{name: "init returns boards message and view uses alt screen"},
 	}
 
-	view := m.View()
-	if !view.AltScreen {
-		t.Fatalf("expected app view to request alt screen")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
+
+			ctx := testutil.MustContext()
+			m := app.New(ctx, svc)
+
+			initCmd := m.Init()
+			require.NotNil(t, initCmd)
+			msg := initCmd()
+			require.NotNil(t, msg)
+			_, ok := msg.(boards.ListBoardsMsg)
+			assert.True(t, ok)
+
+			view := m.View()
+			assert.True(t, view.AltScreen)
+		})
 	}
 }
 
 func TestAppWindowSizeUpdatePath(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{name: "window size update returns app model", width: 120, height: 40},
+	}
 
-	ctx := testutil.MustContext()
-	m := app.New(ctx, svc)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	model, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
-	if _, ok := model.(app.AppModel); !ok {
-		t.Fatalf("expected app.AppModel, got %T", model)
+			ctx := testutil.MustContext()
+			m := app.New(ctx, svc)
+
+			model, _ := m.Update(tea.WindowSizeMsg{Width: tt.width, Height: tt.height})
+			_, ok := model.(app.AppModel)
+			assert.True(t, ok)
+		})
 	}
 }

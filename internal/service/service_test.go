@@ -4,98 +4,159 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
 )
 
 func TestBoardLifecycle(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
+	tests := []struct {
+		name      string
+		boardName string
+		updated   string
+	}{
+		{name: "create update and delete board", boardName: "Inbox", updated: "Updated"},
+	}
 
-	ctx := testutil.MustContext()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	board := mustCreateBoard(ctx, t, svc, "Inbox")
-	requirePositiveID(t, board.ID)
+			ctx := testutil.MustContext()
+			board := mustCreateBoard(ctx, t, svc, tt.boardName)
+			require.Positive(t, board.ID)
 
-	boards := mustListBoards(ctx, t, svc)
-	assertBoardNames(t, boards, []string{"Inbox"})
+			boards := mustListBoards(ctx, t, svc)
+			assertBoardNames(t, boards, []string{tt.boardName})
 
-	board.Name = "Updated"
-	updated := mustUpdateBoard(ctx, t, svc, board)
-	requireEqualString(t, updated.Name, "Updated", "updated board name")
+			board.Name = tt.updated
+			updated := mustUpdateBoard(ctx, t, svc, board)
+			assert.Equal(t, tt.updated, updated.Name)
 
-	mustDeleteBoard(ctx, t, svc, updated)
+			mustDeleteBoard(ctx, t, svc, updated)
 
-	afterDelete := mustListBoards(ctx, t, svc)
-	assertBoardNames(t, afterDelete, []string{})
+			afterDelete := mustListBoards(ctx, t, svc)
+			assertBoardNames(t, afterDelete, []string{})
+		})
+	}
 }
 
 func TestItemLifecycle(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
+	tests := []struct {
+		name            string
+		boardName       string
+		title           string
+		description     string
+		updatedDesc     string
+		tags            []string
+		expectCompleted bool
+	}{
+		{
+			name:            "create and update item",
+			boardName:       "Projects",
+			title:           "task",
+			description:     "desc",
+			updatedDesc:     "updated desc",
+			tags:            []string{"work", "go"},
+			expectCompleted: true,
+		},
+	}
 
-	ctx := testutil.MustContext()
-	board := mustCreateBoard(ctx, t, svc, "Projects")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	item := mustCreateItem(ctx, t, svc, board, "task", "desc")
-	itemsByBoard := mustListItemsByBoard(ctx, t, svc, board)
-	requireEqualInt(t, len(*itemsByBoard), 1, "items by board")
+			ctx := testutil.MustContext()
+			board := mustCreateBoard(ctx, t, svc, tt.boardName)
 
-	item.Tags = []string{"work", "go"}
-	item.Completed = true
-	item.Description = "updated desc"
-	updated := mustUpdateItem(ctx, t, svc, item)
-	requireEqualInt(t, len(updated.Tags), 2, "updated tags")
-	requireTrue(t, updated.Completed, "item completed flag")
+			item := mustCreateItem(ctx, t, svc, board, tt.title, tt.description)
+			itemsByBoard := mustListItemsByBoard(ctx, t, svc, board)
+			require.Len(t, *itemsByBoard, 1)
+
+			item.Tags = tt.tags
+			item.Completed = tt.expectCompleted
+			item.Description = tt.updatedDesc
+			updated := mustUpdateItem(ctx, t, svc, item)
+			assert.Len(t, updated.Tags, len(tt.tags))
+			assert.Equal(t, tt.updatedDesc, updated.Description)
+			assert.Equal(t, tt.expectCompleted, updated.Completed)
+		})
+	}
 }
 
 func TestTagCounts(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
+	tests := []struct {
+		name        string
+		initialTags []string
+		updatedTags []string
+		wantBefore  map[string]int
+		wantAfter   map[string]int
+	}{
+		{
+			name:        "tag counts track updates",
+			initialTags: []string{"work", "go"},
+			updatedTags: []string{"go"},
+			wantBefore:  map[string]int{"work": 1, "go": 1},
+			wantAfter:   map[string]int{"work": 0, "go": 1},
+		},
+	}
 
-	ctx := testutil.MustContext()
-	board := mustCreateBoard(ctx, t, svc, "Tags")
-	item := mustCreateItem(ctx, t, svc, board, "tagged", "")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	item.Tags = []string{"work", "go"}
-	item = mustUpdateItem(ctx, t, svc, item)
+			ctx := testutil.MustContext()
+			board := mustCreateBoard(ctx, t, svc, "Tags")
+			item := mustCreateItem(ctx, t, svc, board, "tagged", "")
 
-	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "work"), 1, "count work tag")
-	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "go"), 1, "count go tag")
+			item.Tags = tt.initialTags
+			item = mustUpdateItem(ctx, t, svc, item)
 
-	item.Tags = []string{"go"}
-	item = mustUpdateItem(ctx, t, svc, item)
+			for tag, want := range tt.wantBefore {
+				assert.Equal(t, want, mustCountItemsByTag(ctx, t, svc, tag))
+			}
 
-	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "work"), 0, "count work after removal")
-	requireEqualInt(t, mustCountItemsByTag(ctx, t, svc, "go"), 1, "count go remains")
+			item.Tags = tt.updatedTags
+			item = mustUpdateItem(ctx, t, svc, item)
 
-	mustDeleteItem(ctx, t, svc, item)
+			for tag, want := range tt.wantAfter {
+				assert.Equal(t, want, mustCountItemsByTag(ctx, t, svc, tag))
+			}
+
+			mustDeleteItem(ctx, t, svc, item)
+		})
+	}
 }
 
 func mustCreateBoard(ctx context.Context, t *testing.T, svc *service.Service, name string) *service.Board {
 	t.Helper()
 	board, err := svc.CreateBoard(ctx, name)
-	requireNoError(t, err, "CreateBoard")
+	require.NoError(t, err)
 	return board
 }
 
 func mustListBoards(ctx context.Context, t *testing.T, svc *service.Service) *[]service.Board {
 	t.Helper()
 	boards, err := svc.ListBoards(ctx)
-	requireNoError(t, err, "ListBoards")
+	require.NoError(t, err)
 	return boards
 }
 
 func mustUpdateBoard(ctx context.Context, t *testing.T, svc *service.Service, board *service.Board) *service.Board {
 	t.Helper()
 	updated, err := svc.UpdateBoard(ctx, board)
-	requireNoError(t, err, "UpdateBoard")
+	require.NoError(t, err)
 	return updated
 }
 
 func mustDeleteBoard(ctx context.Context, t *testing.T, svc *service.Service, board *service.Board) {
 	t.Helper()
-	requireNoError(t, svc.DeleteBoard(ctx, board), "DeleteBoard")
+	require.NoError(t, svc.DeleteBoard(ctx, board))
 }
 
 func mustCreateItem(
@@ -107,14 +168,14 @@ func mustCreateItem(
 ) *service.Item {
 	t.Helper()
 	item, err := svc.CreateItem(ctx, board, title, desc)
-	requireNoError(t, err, "CreateItem")
+	require.NoError(t, err)
 	return item
 }
 
 func mustUpdateItem(ctx context.Context, t *testing.T, svc *service.Service, item *service.Item) *service.Item {
 	t.Helper()
 	updated, err := svc.UpdateItem(ctx, item)
-	requireNoError(t, err, "UpdateItem")
+	require.NoError(t, err)
 	return updated
 }
 
@@ -126,65 +187,26 @@ func mustListItemsByBoard(
 ) *[]service.Item {
 	t.Helper()
 	items, err := svc.ListItemsByBoard(ctx, board)
-	requireNoError(t, err, "ListItemsByBoard")
+	require.NoError(t, err)
 	return items
 }
 
 func mustCountItemsByTag(ctx context.Context, t *testing.T, svc *service.Service, tag string) int {
 	t.Helper()
 	count, err := svc.CountItemsByTag(ctx, tag)
-	requireNoError(t, err, "CountItemsByTag")
+	require.NoError(t, err)
 	return int(count)
 }
 
 func mustDeleteItem(ctx context.Context, t *testing.T, svc *service.Service, item *service.Item) {
 	t.Helper()
-	requireNoError(t, svc.DeleteItem(ctx, item), "DeleteItem")
-}
-
-func requireNoError(t *testing.T, err error, context string) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("%s: %v", context, err)
-	}
-}
-
-func requirePositiveID(t *testing.T, id int64) {
-	t.Helper()
-	if id == 0 {
-		t.Fatalf("expected ID to be set")
-	}
-}
-
-func requireEqualString(t *testing.T, got, expected string, label string) {
-	t.Helper()
-	if got != expected {
-		t.Fatalf("expected %s %q, got %q", label, expected, got)
-	}
-}
-
-func requireEqualInt(t *testing.T, got, expected int, label string) {
-	t.Helper()
-	if got != expected {
-		t.Fatalf("expected %s %d, got %d", label, expected, got)
-	}
-}
-
-func requireTrue(t *testing.T, v bool, label string) {
-	t.Helper()
-	if !v {
-		t.Fatalf("expected %s to be true", label)
-	}
+	require.NoError(t, svc.DeleteItem(ctx, item))
 }
 
 func assertBoardNames(t *testing.T, boards *[]service.Board, names []string) {
 	t.Helper()
-	if len(*boards) != len(names) {
-		t.Fatalf("expected %d boards, got %d", len(names), len(*boards))
-	}
+	require.Len(t, *boards, len(names))
 	for i, b := range *boards {
-		if b.Name != names[i] {
-			t.Fatalf("unexpected board name %q at index %d", b.Name, i)
-		}
+		assert.Equal(t, names[i], b.Name)
 	}
 }

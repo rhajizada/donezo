@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 type stubItem struct {
@@ -37,89 +38,80 @@ func newModel(items []Item) Model {
 }
 
 func TestSetFilterTextAppliesMatches(t *testing.T) {
-	items := []Item{
-		stubItem{title: "alpha"},
-		stubItem{title: "beta"},
+	tests := []struct {
+		name       string
+		filter     string
+		wantState  FilterState
+		wantTitles []string
+	}{
+		{name: "filter narrows visible items", filter: "beta", wantState: FilterApplied, wantTitles: []string{"beta"}},
 	}
-	m := newModel(items)
 
-	m.SetFilterText("beta")
-
-	if m.FilterState() != FilterApplied {
-		t.Fatalf("expected filter applied state, got %v", m.FilterState())
-	}
-	if m.FilterValue() != "beta" {
-		t.Fatalf("unexpected filter value %q", m.FilterValue())
-	}
-	visible := m.VisibleItems()
-	if len(visible) != 1 {
-		t.Fatalf("expected 1 visible item after filter, got %d", len(visible))
-	}
-	if visible[0].(stubItem).title != "beta" {
-		t.Fatalf("unexpected filtered item %v", visible[0])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel([]Item{stubItem{title: "alpha"}, stubItem{title: "beta"}})
+			m.SetFilterText(tt.filter)
+			assert.Equal(t, tt.wantState, m.FilterState())
+			assert.Equal(t, tt.filter, m.FilterValue())
+			visible := m.VisibleItems()
+			assert.Len(t, visible, len(tt.wantTitles))
+			for i, want := range tt.wantTitles {
+				assert.Equal(t, want, visible[i].(stubItem).title)
+			}
+		})
 	}
 }
 
 func TestToggleHideRespectsHideValue(t *testing.T) {
-	items := []Item{
-		stubItem{title: "keep"},
-		stubItem{title: "hide", hidden: true},
-	}
-	m := newModel(items)
-
-	if len(m.VisibleItems()) != 2 {
-		t.Fatalf("expected 2 items initially, got %d", len(m.VisibleItems()))
+	tests := []struct {
+		name      string
+		wantCount []int
+	}{
+		{name: "toggle hide filters hidden items then restores them", wantCount: []int{2, 1, 2}},
 	}
 
-	m.ToggleHide()
-	visible := m.VisibleItems()
-	if len(visible) != 1 {
-		t.Fatalf("expected 1 visible item after hiding, got %d", len(visible))
-	}
-	if visible[0].(stubItem).title != "keep" {
-		t.Fatalf("unexpected item kept visible: %v", visible[0])
-	}
-
-	m.ToggleHide()
-	if len(m.VisibleItems()) != 2 {
-		t.Fatalf("expected hidden items restored, got %d", len(m.VisibleItems()))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel([]Item{stubItem{title: "keep"}, stubItem{title: "hide", hidden: true}})
+			assert.Len(t, m.VisibleItems(), tt.wantCount[0])
+			m.ToggleHide()
+			visible := m.VisibleItems()
+			assert.Len(t, visible, tt.wantCount[1])
+			assert.Equal(t, "keep", visible[0].(stubItem).title)
+			m.ToggleHide()
+			assert.Len(t, m.VisibleItems(), tt.wantCount[2])
+		})
 	}
 }
 
 func TestFilteringFlowEnablesBindings(t *testing.T) {
-	items := []Item{
-		stubItem{title: "alpha"},
-		stubItem{title: "beta"},
-	}
-	m := newModel(items)
-
-	// Enter filtering mode.
-	model, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
-	m = model
-	if m.FilterState() != Filtering {
-		t.Fatalf("expected filtering state, got %v", m.FilterState())
-	}
-	if m.KeyMap.AcceptWhileFiltering.Enabled() {
-		t.Fatalf("accept should be disabled with empty filter")
+	tests := []struct {
+		name string
+	}{
+		{name: "filtering flow enables accept and applies filter"},
 	}
 
-	// Type a filter value.
-	model, cmd := m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
-	m = model
-	if cmd != nil {
-		if msg := cmd(); msg != nil {
-			model, _ = m.Update(msg)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newModel([]Item{stubItem{title: "alpha"}, stubItem{title: "beta"}})
+			model, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 			m = model
-		}
-	}
-	if !m.KeyMap.AcceptWhileFiltering.Enabled() {
-		t.Fatalf("accept should enable after typing filter text")
-	}
+			assert.Equal(t, Filtering, m.FilterState())
+			assert.False(t, m.KeyMap.AcceptWhileFiltering.Enabled())
 
-	// Accept the filter.
-	model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m = model
-	if m.FilterState() != FilterApplied {
-		t.Fatalf("expected filter applied after accept, got %v", m.FilterState())
+			model, cmd := m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
+			m = model
+			if cmd != nil {
+				if msg := cmd(); msg != nil {
+					model, _ = m.Update(msg)
+					m = model
+				}
+			}
+			assert.True(t, m.KeyMap.AcceptWhileFiltering.Enabled())
+
+			model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+			m = model
+			assert.Equal(t, FilterApplied, m.FilterState())
+		})
 	}
 }

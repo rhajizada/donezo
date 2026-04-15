@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/repository"
 	"github.com/rhajizada/donezo/internal/service"
@@ -13,258 +15,206 @@ import (
 )
 
 func TestCopySavesItemJSON(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	ctx := testutil.MustContext()
-	var err error
-
-	board, err := svc.CreateBoard(ctx, "Inbox")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
-	}
-	item, err := svc.CreateItem(ctx, board, "title", "desc")
-	if err != nil {
-		t.Fatalf("CreateItem: %v", err)
-	}
-	item.Tags = []string{"tag1", "tag2"}
-	item.Completed = true
-	item, err = svc.UpdateItem(ctx, item)
-	if err != nil {
-		t.Fatalf("UpdateItem: %v", err)
+	tests := []struct {
+		name string
+	}{
+		{name: "copy stores serialized item in clipboard"},
 	}
 
-	items, err := svc.ListItemsByBoard(ctx, board)
-	if err != nil {
-		t.Fatalf("ListItemsByBoard: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	parent := boards.New(ctx, svc)
-	parent.List.SetItems(boards.NewList(&[]service.Board{*board}))
-	parent.List.Select(0)
+			ctx := testutil.MustContext()
+			board, err := svc.CreateBoard(ctx, "Inbox")
+			require.NoError(t, err)
+			item, err := svc.CreateItem(ctx, board, "title", "desc")
+			require.NoError(t, err)
+			item.Tags = []string{"tag1", "tag2"}
+			item.Completed = true
+			item, err = svc.UpdateItem(ctx, item)
+			require.NoError(t, err)
+			items, err := svc.ListItemsByBoard(ctx, board)
+			require.NoError(t, err)
 
-	menu := New(ctx, svc, &parent)
-	menu.List.SetItems(NewList(items))
-	menu.List.Select(0)
+			parent := boards.New(ctx, svc)
+			parent.List.SetItems(boards.NewList(&[]service.Board{*board}))
+			parent.List.Select(0)
+			menu := New(ctx, svc, &parent)
+			menu.List.SetItems(NewList(items))
+			menu.List.Select(0)
 
-	var captured []byte
-	prevWrite := writeClipboardText
-	writeClipboardText = func(data []byte) { captured = append([]byte{}, data...) }
-	defer func() { writeClipboardText = prevWrite }()
+			var captured []byte
+			prevWrite := writeClipboardText
+			writeClipboardText = func(data []byte) { captured = append([]byte{}, data...) }
+			defer func() { writeClipboardText = prevWrite }()
 
-	cmd := menu.Copy()
-	if cmd != nil {
-		cmd()
-	}
+			cmd := menu.Copy()
+			if cmd != nil {
+				cmd()
+			}
+			assert.NotEmpty(t, captured)
 
-	if len(captured) == 0 {
-		t.Fatalf("expected clipboard content to be written")
-	}
-
-	var saved service.Item
-	err = json.Unmarshal(captured, &saved)
-	if err != nil {
-		t.Fatalf("Unmarshal copied item: %v", err)
-	}
-
-	if saved.Title != item.Title || saved.Description != item.Description {
-		t.Fatalf("unexpected copied item: %+v", saved)
-	}
-	if !saved.Completed {
-		t.Fatalf("expected completed item in clipboard")
-	}
-	if len(saved.Tags) != len(item.Tags) {
-		t.Fatalf("expected tags copied, got %+v", saved.Tags)
+			var saved service.Item
+			require.NoError(t, json.Unmarshal(captured, &saved))
+			assert.Equal(t, item.Title, saved.Title)
+			assert.Equal(t, item.Description, saved.Description)
+			assert.True(t, saved.Completed)
+			assert.Len(t, saved.Tags, len(item.Tags))
+		})
 	}
 }
 
 func TestPasteCreatesItemOnSelectedBoard(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	ctx := testutil.MustContext()
-	var err error
-
-	board, err := svc.CreateBoard(ctx, "Inbox")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
+	tests := []struct {
+		name string
+	}{
+		{name: "paste creates item on selected board"},
 	}
 
-	parent := boards.New(ctx, svc)
-	parent.List.SetItems(boards.NewList(&[]service.Board{*board}))
-	parent.List.Select(0)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	menu := New(ctx, svc, &parent)
+			ctx := testutil.MustContext()
+			board, err := svc.CreateBoard(ctx, "Inbox")
+			require.NoError(t, err)
 
-	clipItem := service.Item{
-		Item: repository.Item{
-			Title:       "from clipboard",
-			Description: "pasted description",
-			Completed:   true,
-		},
-		Tags: []string{"work", "go"},
-	}
-	data, err := json.Marshal(clipItem)
-	if err != nil {
-		t.Fatalf("Marshal clipboard item: %v", err)
-	}
+			parent := boards.New(ctx, svc)
+			parent.List.SetItems(boards.NewList(&[]service.Board{*board}))
+			parent.List.Select(0)
+			menu := New(ctx, svc, &parent)
 
-	prevRead := readClipboardText
-	readClipboardText = func() []byte { return data }
-	defer func() { readClipboardText = prevRead }()
+			clipItem := service.Item{
+				Item: repository.Item{
+					Title:       "from clipboard",
+					Description: "pasted description",
+					Completed:   true,
+				},
+				Tags: []string{"work", "go"},
+			}
+			data, err := json.Marshal(clipItem)
+			require.NoError(t, err)
 
-	cmd := menu.Paste()
-	if cmd == nil {
-		t.Fatalf("expected paste command")
-	}
+			prevRead := readClipboardText
+			readClipboardText = func() []byte { return data }
+			defer func() { readClipboardText = prevRead }()
 
-	msg := cmd()
-	created, ok := msg.(CreateItemMsg)
-	if !ok {
-		t.Fatalf("expected CreateItemMsg, got %T", msg)
-	}
-	if created.Error != nil {
-		t.Fatalf("Paste returned error: %v", created.Error)
-	}
-	if created.Item == nil {
-		t.Fatalf("expected created item")
-	}
-	if created.Item.BoardID != board.ID {
-		t.Fatalf("expected item on board %d, got %d", board.ID, created.Item.BoardID)
-	}
-	if created.Item.Title != clipItem.Title || created.Item.Description != clipItem.Description {
-		t.Fatalf("unexpected item fields: %+v", created.Item)
-	}
-	if !created.Item.Completed {
-		t.Fatalf("expected completed item after paste")
-	}
-	if len(created.Item.Tags) != len(clipItem.Tags) {
-		t.Fatalf("expected tags to persist, got %+v", created.Item.Tags)
-	}
+			cmd := menu.Paste()
+			require.NotNil(t, cmd)
+			created, ok := cmd().(CreateItemMsg)
+			require.True(t, ok)
+			require.NoError(t, created.Error)
+			require.NotNil(t, created.Item)
+			assert.Equal(t, board.ID, created.Item.BoardID)
+			assert.Equal(t, clipItem.Title, created.Item.Title)
+			assert.Equal(t, clipItem.Description, created.Item.Description)
+			assert.True(t, created.Item.Completed)
+			assert.Len(t, created.Item.Tags, len(clipItem.Tags))
 
-	items, err := svc.ListItemsByBoard(ctx, board)
-	if err != nil {
-		t.Fatalf("ListItemsByBoard: %v", err)
-	}
-	if len(*items) != 1 {
-		t.Fatalf("expected 1 item in board after paste, got %d", len(*items))
+			items, err := svc.ListItemsByBoard(ctx, board)
+			require.NoError(t, err)
+			assert.Len(t, *items, 1)
+		})
 	}
 }
 
 func TestItemCreateRenameToggleTagDeleteFlow(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	ctx := testutil.MustContext()
-	board, err := svc.CreateBoard(ctx, "Work")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
+	tests := []struct {
+		name string
+	}{
+		{name: "item create rename toggle update tags and delete flow"},
 	}
 
-	parent := boards.New(ctx, svc)
-	parent.List.SetItems(boards.NewList(&[]service.Board{*board}))
-	parent.List.Select(0)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	menu := New(ctx, svc, &parent)
+			ctx := testutil.MustContext()
+			board, err := svc.CreateBoard(ctx, "Work")
+			require.NoError(t, err)
+			parent := boards.New(ctx, svc)
+			parent.List.SetItems(boards.NewList(&[]service.Board{*board}))
+			parent.List.Select(0)
+			menu := New(ctx, svc, &parent)
 
-	// Create item via input flow.
-	menu.InitCreateItem()
-	menu.Input.SetValue("Title")
-	model, _ := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	menu = model.(MenuModel)
-	if menu.Context.State != CreateItemDescState {
-		t.Fatalf("expected to prompt for description, got state %v", menu.Context.State)
-	}
-	menu.Input.SetValue("Desc")
-	model, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	menu = model.(MenuModel)
-	if cmd == nil {
-		t.Fatalf("expected create command")
-	}
-	if msg := cmd(); msg != nil {
-		model, _ = menu.Update(msg)
-		menu = model.(MenuModel)
-	}
-	if len(menu.List.Items()) != 1 {
-		t.Fatalf("expected 1 item after create, got %d", len(menu.List.Items()))
-	}
+			menu.InitCreateItem()
+			menu.Input.SetValue("Title")
+			model, _ := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+			menu = model.(MenuModel)
+			assert.Equal(t, CreateItemDescState, menu.Context.State)
+			menu.Input.SetValue("Desc")
+			model, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+			menu = model.(MenuModel)
+			require.NotNil(t, cmd)
+			if msg := cmd(); msg != nil {
+				model, _ = menu.Update(msg)
+				menu = model.(MenuModel)
+			}
+			assert.Len(t, menu.List.Items(), 1)
 
-	// Rename item via two-step input.
-	menu.InitRenameItem()
-	menu.Input.SetValue("New Title")
-	model, _ = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	menu = model.(MenuModel)
-	if menu.Context.State != RenameItemDescState {
-		t.Fatalf("expected rename description state, got %v", menu.Context.State)
-	}
-	menu.Input.SetValue("New Desc")
-	model, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	menu = model.(MenuModel)
-	if cmd == nil {
-		t.Fatalf("expected rename command")
-	}
-	if msg := cmd(); msg != nil {
-		model, _ = menu.Update(msg)
-		menu = model.(MenuModel)
-	}
-	renamed, _ := menu.selectedItem()
-	if renamed.Itm.Title != "New Title" || renamed.Itm.Description != "New Desc" {
-		t.Fatalf("rename not applied, got %+v", renamed.Itm)
-	}
+			menu.InitRenameItem()
+			menu.Input.SetValue("New Title")
+			model, _ = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+			menu = model.(MenuModel)
+			assert.Equal(t, RenameItemDescState, menu.Context.State)
+			menu.Input.SetValue("New Desc")
+			model, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+			menu = model.(MenuModel)
+			require.NotNil(t, cmd)
+			if msg := cmd(); msg != nil {
+				model, _ = menu.Update(msg)
+				menu = model.(MenuModel)
+			}
+			renamed, ok := menu.selectedItem()
+			require.True(t, ok)
+			assert.Equal(t, "New Title", renamed.Itm.Title)
+			assert.Equal(t, "New Desc", renamed.Itm.Description)
 
-	// Toggle completion.
-	cmd = menu.ToggleComplete()
-	if cmd == nil {
-		t.Fatalf("expected toggle command")
-	}
-	if msg := cmd(); msg != nil {
-		model, _ = menu.Update(msg)
-		menu = model.(MenuModel)
-	}
-	toggled, _ := menu.selectedItem()
-	if !toggled.Itm.Completed {
-		t.Fatalf("expected item to be completed after toggle")
-	}
+			cmd = menu.ToggleComplete()
+			require.NotNil(t, cmd)
+			if msg := cmd(); msg != nil {
+				model, _ = menu.Update(msg)
+				menu = model.(MenuModel)
+			}
+			toggled, ok := menu.selectedItem()
+			require.True(t, ok)
+			assert.True(t, toggled.Itm.Completed)
 
-	// Update tags.
-	menu.InitUpdateTags()
-	menu.Input.SetValue("one, two")
-	model, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	menu = model.(MenuModel)
-	if cmd == nil {
-		t.Fatalf("expected update tags command")
-	}
-	if msg := cmd(); msg != nil {
-		model, _ = menu.Update(msg)
-		menu = model.(MenuModel)
-	}
-	tagged, _ := menu.selectedItem()
-	if len(tagged.Itm.Tags) != 2 {
-		t.Fatalf("expected 2 tags, got %+v", tagged.Itm.Tags)
-	}
+			menu.InitUpdateTags()
+			menu.Input.SetValue("one, two")
+			model, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+			menu = model.(MenuModel)
+			require.NotNil(t, cmd)
+			if msg := cmd(); msg != nil {
+				model, _ = menu.Update(msg)
+				menu = model.(MenuModel)
+			}
+			tagged, ok := menu.selectedItem()
+			require.True(t, ok)
+			assert.Len(t, tagged.Itm.Tags, 2)
 
-	// Delete item (clipboard write stubbed).
-	prevWrite := writeClipboardText
-	writeClipboardText = func(_ []byte) {}
-	defer func() { writeClipboardText = prevWrite }()
+			prevWrite := writeClipboardText
+			writeClipboardText = func(_ []byte) {}
+			defer func() { writeClipboardText = prevWrite }()
 
-	cmd = menu.DeleteItem()
-	msg := cmd()
-	model, _ = menu.Update(msg)
-	menu = model.(MenuModel)
+			cmd = menu.DeleteItem()
+			require.NotNil(t, cmd)
+			msg := cmd()
+			model, _ = menu.Update(msg)
+			menu = model.(MenuModel)
+			refresh := menu.ListItems()
+			msg = refresh()
+			model, _ = menu.Update(msg)
+			menu = model.(MenuModel)
+			assert.Empty(t, menu.List.Items())
 
-	refresh := menu.ListItems()
-	msg = refresh()
-	model, _ = menu.Update(msg)
-	menu = model.(MenuModel)
-	if len(menu.List.Items()) != 0 {
-		t.Fatalf("expected list empty after delete, got %d", len(menu.List.Items()))
-	}
-	items, err := svc.ListItemsByBoard(ctx, board)
-	if err != nil {
-		t.Fatalf("ListItemsByBoard: %v", err)
-	}
-	if len(*items) != 0 {
-		t.Fatalf("expected no items in service after delete, got %d", len(*items))
+			items, err := svc.ListItemsByBoard(ctx, board)
+			require.NoError(t, err)
+			assert.Empty(t, *items)
+		})
 	}
 }

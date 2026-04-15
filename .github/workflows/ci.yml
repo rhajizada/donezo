@@ -80,16 +80,15 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           set -euo pipefail
-          mod="$(go list -m -f '{{.Path}}')"
-          pkgs="$(go list ./... \
-            | grep -vE '/(docs|vendor|mocks|testdata|internal/repository|internal/testutil)(/|$)' \
-            | grep -vFx "$mod" || true)"
+          packages="$(go list ./... | grep -vE '^github.com/rhajizada/donezo/(cmd($|/)|docs$|internal/testutil$)')"
+          coverpkg="$(printf "%s" "$packages" | tr "\n" "," | sed 's/,$//')"
 
-          if [ -z "$pkgs" ]; then
+          if [ -z "$packages" ]; then
             echo "No packages matched for coverage." >&2
             exit 1
           fi
-          go tool gotestsum -- -coverprofile=coverage.out $pkgs > /dev/null
+
+          go tool gotestsum -- -coverpkg="$coverpkg" -coverprofile=coverage.out $packages > /dev/null
         shell: bash
 
       - name: Parse coverage

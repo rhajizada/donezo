@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
@@ -16,244 +18,231 @@ import (
 func seedBoard(t *testing.T, svc *service.Service, name string) *service.Board {
 	t.Helper()
 	board, err := svc.CreateBoard(testutil.MustContext(), name)
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
-	}
+	require.NoError(t, err)
 	return board
 }
 
 func TestAppNavigatesBetweenBoardsAndItems(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	board := seedBoard(t, svc, "Inbox")
-	if _, err := svc.CreateItem(testutil.MustContext(), board, "task", "desc"); err != nil {
-		t.Fatalf("CreateItem: %v", err)
+	tests := []struct {
+		name string
+	}{
+		{name: "open board items then navigate back"},
 	}
 
-	ctx := testutil.MustContext()
-	m := New(ctx, svc)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	// Preload boards list so selection exists.
-	m.boards.List.SetItems(boards.NewList(&[]service.Board{*board}))
+			board := seedBoard(t, svc, "Inbox")
+			_, err := svc.CreateItem(testutil.MustContext(), board, "task", "desc")
+			require.NoError(t, err)
 
-	model, _ := m.Update(navigation.OpenBoardItemsMsg{})
-	am, ok := model.(AppModel)
-	if !ok {
-		t.Fatalf("unexpected model type %T", model)
-	}
-	if am.active != navigation.ViewItemsByBoard {
-		t.Fatalf("expected active view items-by-board, got %v", am.active)
-	}
-	if am.itemsByBoard == nil {
-		t.Fatalf("expected itemsByBoard to be initialized")
-	}
+			ctx := testutil.MustContext()
+			m := New(ctx, svc)
+			m.boards.List.SetItems(boards.NewList(&[]service.Board{*board}))
 
-	// Navigate back to boards view.
-	model, _ = am.Update(navigation.BackMsg{})
-	am, ok = model.(AppModel)
-	if !ok {
-		t.Fatalf("unexpected model type after back %T", model)
-	}
-	if am.active != navigation.ViewBoards {
-		t.Fatalf("expected active view boards, got %v", am.active)
+			model, _ := m.Update(navigation.OpenBoardItemsMsg{})
+			am, ok := model.(AppModel)
+			require.True(t, ok)
+			assert.Equal(t, navigation.ViewItemsByBoard, am.active)
+			assert.NotNil(t, am.itemsByBoard)
+
+			model, _ = am.Update(navigation.BackMsg{})
+			am, ok = model.(AppModel)
+			require.True(t, ok)
+			assert.Equal(t, navigation.ViewBoards, am.active)
+		})
 	}
 }
 
 func TestBoardsEscDoesNotQuit(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	board := seedBoard(t, svc, "Inbox")
-	ctx := testutil.MustContext()
-	menu := boards.New(ctx, svc)
-	menu.List.SetItems(boards.NewList(&[]service.Board{*board}))
-
-	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
-	model, cmd := menu.Update(msg)
-	if cmd != nil {
-		// ESC on boards view should not emit a quit command.
-		if _, ok := cmd().(tea.QuitMsg); ok {
-			t.Fatalf("esc should not quit application")
-		}
+	tests := []struct {
+		name string
+	}{
+		{name: "esc keeps boards view active"},
 	}
 
-	if updated, ok := model.(boards.MenuModel); ok {
-		if updated.State != boards.DefaultState {
-			t.Fatalf("expected default state after esc, got %v", updated.State)
-		}
-	} else {
-		t.Fatalf("unexpected model type %T", model)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
+
+			board := seedBoard(t, svc, "Inbox")
+			ctx := testutil.MustContext()
+			menu := boards.New(ctx, svc)
+			menu.List.SetItems(boards.NewList(&[]service.Board{*board}))
+
+			model, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
+			if cmd != nil {
+				_, ok := cmd().(tea.QuitMsg)
+				assert.False(t, ok)
+			}
+
+			updated, ok := model.(boards.MenuModel)
+			require.True(t, ok)
+			assert.Equal(t, boards.DefaultState, updated.State)
+		})
 	}
 }
 
 func TestTagsEscDoesNotQuit(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	board := seedBoard(t, svc, "Inbox")
-	item, err := svc.CreateItem(testutil.MustContext(), board, "task", "desc")
-	if err != nil {
-		t.Fatalf("CreateItem: %v", err)
-	}
-	item.Tags = []string{"inbox"}
-	_, err = svc.UpdateItem(testutil.MustContext(), item)
-	if err != nil {
-		t.Fatalf("UpdateItem (add tag): %v", err)
+	tests := []struct {
+		name string
+		tag  string
+	}{
+		{name: "esc keeps tags view active", tag: "inbox"},
 	}
 
-	tagCount, err := svc.CountItemsByTag(testutil.MustContext(), "inbox")
-	if err != nil {
-		t.Fatalf("CountItemsByTag: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	ctx := testutil.MustContext()
-	menu := tags.NewModel(ctx, svc)
-	menu.List.SetItems(tags.NewList([]tags.Item{
-		tags.NewItem("inbox", tagCount),
-	}))
+			board := seedBoard(t, svc, "Inbox")
+			item, err := svc.CreateItem(testutil.MustContext(), board, "task", "desc")
+			require.NoError(t, err)
+			item.Tags = []string{tt.tag}
+			_, err = svc.UpdateItem(testutil.MustContext(), item)
+			require.NoError(t, err)
 
-	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
-	model, cmd := menu.Update(msg)
-	if cmd != nil {
-		if _, ok := cmd().(tea.QuitMsg); ok {
-			t.Fatalf("esc should not quit application in tags view")
-		}
-	}
+			tagCount, err := svc.CountItemsByTag(testutil.MustContext(), tt.tag)
+			require.NoError(t, err)
 
-	if _, ok := model.(tags.MenuModel); !ok {
-		t.Fatalf("unexpected model type %T", model)
+			ctx := testutil.MustContext()
+			menu := tags.NewModel(ctx, svc)
+			menu.List.SetItems(tags.NewList([]tags.Item{tags.NewItem(tt.tag, tagCount)}))
+
+			model, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
+			if cmd != nil {
+				_, ok := cmd().(tea.QuitMsg)
+				assert.False(t, ok)
+			}
+
+			_, ok := model.(tags.MenuModel)
+			assert.True(t, ok)
+		})
 	}
 }
 
 func TestBoardsTabSwitchesToTags(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	ctx := testutil.MustContext()
-	board := seedBoard(t, svc, "Inbox")
-	item, err := svc.CreateItem(ctx, board, "task", "desc")
-	if err != nil {
-		t.Fatalf("CreateItem: %v", err)
-	}
-	item.Tags = []string{"work"}
-	_, err = svc.UpdateItem(ctx, item)
-	if err != nil {
-		t.Fatalf("UpdateItem: %v", err)
+	tests := []struct {
+		name string
+		tag  string
+	}{
+		{name: "tab from boards switches to tags", tag: "work"},
 	}
 
-	m := New(ctx, svc)
-	m.boards.List.SetItems(boards.NewList(&[]service.Board{*board}))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-	appModel := model.(AppModel)
-	if cmd == nil {
-		t.Fatalf("expected command from tab")
-	}
+			ctx := testutil.MustContext()
+			board := seedBoard(t, svc, "Inbox")
+			item, err := svc.CreateItem(ctx, board, "task", "desc")
+			require.NoError(t, err)
+			item.Tags = []string{tt.tag}
+			_, err = svc.UpdateItem(ctx, item)
+			require.NoError(t, err)
 
-	switchMsg := cmd()
-	model, cmd = appModel.Update(switchMsg)
-	appModel = model.(AppModel)
-	if cmd != nil {
-		if msg := cmd(); msg != nil {
-			model, _ = appModel.Update(msg)
+			m := New(ctx, svc)
+			m.boards.List.SetItems(boards.NewList(&[]service.Board{*board}))
+
+			model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+			appModel := model.(AppModel)
+			require.NotNil(t, cmd)
+
+			switchMsg := cmd()
+			model, cmd = appModel.Update(switchMsg)
 			appModel = model.(AppModel)
-		}
-	}
+			if cmd != nil {
+				if msg := cmd(); msg != nil {
+					model, _ = appModel.Update(msg)
+					appModel = model.(AppModel)
+				}
+			}
 
-	if appModel.active != navigation.ViewTags {
-		t.Fatalf("expected to switch to tags, got %v", appModel.active)
-	}
-	if len(appModel.tags.List.Items()) != 1 {
-		t.Fatalf("expected tags to be loaded, got %d", len(appModel.tags.List.Items()))
+			assert.Equal(t, navigation.ViewTags, appModel.active)
+			assert.Len(t, appModel.tags.List.Items(), 1)
+		})
 	}
 }
 
 func TestItemsByBoardTabAndShiftTabCycleBoards(t *testing.T) {
+	tests := []struct {
+		name          string
+		delta         int
+		wantIndex     int
+		wantBoardName string
+	}{
+		{name: "tab selects next board", delta: 1, wantIndex: 1, wantBoardName: "Two"},
+		{name: "shift tab selects previous board", delta: -1, wantIndex: 0, wantBoardName: "One"},
+	}
+
 	svc, cleanup := testutil.NewTestService(t)
 	defer cleanup()
-
 	ctx := testutil.MustContext()
 	board1 := seedBoard(t, svc, "One")
 	board2 := seedBoard(t, svc, "Two")
-	if _, err := svc.CreateItem(ctx, board1, "a", ""); err != nil {
-		t.Fatalf("CreateItem board1: %v", err)
-	}
-	if _, err := svc.CreateItem(ctx, board2, "b", ""); err != nil {
-		t.Fatalf("CreateItem board2: %v", err)
-	}
+	_, err := svc.CreateItem(ctx, board1, "a", "")
+	require.NoError(t, err)
+	_, err = svc.CreateItem(ctx, board2, "b", "")
+	require.NoError(t, err)
 
 	m := New(ctx, svc)
 	m.boards.List.SetItems(boards.NewList(&[]service.Board{*board1, *board2}))
 	model, _ := m.Update(navigation.OpenBoardItemsMsg{})
 	appModel := model.(AppModel)
 
-	// Move forward (tab)
-	model, cmd := appModel.Update(navigation.BoardDeltaMsg{Delta: 1})
-	appModel = model.(AppModel)
-	if cmd != nil {
-		if msg := cmd(); msg != nil {
-			model, _ = appModel.Update(msg)
-			appModel = model.(AppModel)
-		}
-	}
-	if appModel.boards.List.Index() != 1 {
-		t.Fatalf("expected board index 1, got %d", appModel.boards.List.Index())
-	}
-	if appModel.itemsByBoard.List.Title != board2.Name {
-		t.Fatalf("expected items view for board %s, got %s", board2.Name, appModel.itemsByBoard.List.Title)
-	}
-
-	// Move backward (shift+tab)
-	model, cmd = appModel.Update(navigation.BoardDeltaMsg{Delta: -1})
-	appModel = model.(AppModel)
-	if cmd != nil {
-		if msg := cmd(); msg != nil {
-			model, _ = appModel.Update(msg)
-			appModel = model.(AppModel)
-		}
-	}
-	if appModel.boards.List.Index() != 0 {
-		t.Fatalf("expected board index 0, got %d", appModel.boards.List.Index())
-	}
-	if appModel.itemsByBoard.List.Title != board1.Name {
-		t.Fatalf(
-			"expected items view for board %s after reverse, got %s",
-			board1.Name,
-			appModel.itemsByBoard.List.Title,
-		)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nextModel, cmd := appModel.Update(navigation.BoardDeltaMsg{Delta: tt.delta})
+			updated := nextModel.(AppModel)
+			if cmd != nil {
+				if msg := cmd(); msg != nil {
+					nextModel, _ = updated.Update(msg)
+					updated = nextModel.(AppModel)
+				}
+			}
+			assert.Equal(t, tt.wantIndex, updated.boards.List.Index())
+			assert.Equal(t, tt.wantBoardName, updated.itemsByBoard.List.Title)
+			appModel = updated
+		})
 	}
 }
 
 func TestItemsByTagNextAndPrevious(t *testing.T) {
+	tests := []struct {
+		name         string
+		delta        int
+		wantIndex    int
+		wantTagTitle string
+	}{
+		{name: "next tag moves forward", delta: 1, wantIndex: 1, wantTagTitle: "beta"},
+		{name: "previous tag moves backward", delta: -1, wantIndex: 0, wantTagTitle: "alpha"},
+	}
+
 	svc, cleanup := testutil.NewTestService(t)
 	defer cleanup()
-
 	ctx := testutil.MustContext()
 	board := seedBoard(t, svc, "Inbox")
 	itemA, err := svc.CreateItem(ctx, board, "a", "")
-	if err != nil {
-		t.Fatalf("CreateItem a: %v", err)
-	}
+	require.NoError(t, err)
 	itemA.Tags = []string{"alpha"}
 	_, err = svc.UpdateItem(ctx, itemA)
-	if err != nil {
-		t.Fatalf("UpdateItem a: %v", err)
-	}
+	require.NoError(t, err)
 	itemB, err := svc.CreateItem(ctx, board, "b", "")
-	if err != nil {
-		t.Fatalf("CreateItem b: %v", err)
-	}
+	require.NoError(t, err)
 	itemB.Tags = []string{"beta"}
 	_, err = svc.UpdateItem(ctx, itemB)
-	if err != nil {
-		t.Fatalf("UpdateItem b: %v", err)
-	}
+	require.NoError(t, err)
 
 	m := New(ctx, svc)
-
-	tagCountAlpha, _ := svc.CountItemsByTag(ctx, "alpha")
-	tagCountBeta, _ := svc.CountItemsByTag(ctx, "beta")
+	tagCountAlpha, err := svc.CountItemsByTag(ctx, "alpha")
+	require.NoError(t, err)
+	tagCountBeta, err := svc.CountItemsByTag(ctx, "beta")
+	require.NoError(t, err)
 	m.tags.List.SetItems(tags.NewList([]tags.Item{
 		tags.NewItem("alpha", tagCountAlpha),
 		tags.NewItem("beta", tagCountBeta),
@@ -266,35 +255,19 @@ func TestItemsByTagNextAndPrevious(t *testing.T) {
 	appModel.itemsByTag = &itemTagModel
 	appModel.active = navigation.ViewItemsByTag
 
-	// Move to next tag
-	model, cmd := appModel.Update(navigation.TagDeltaMsg{Delta: 1})
-	appModel = model.(AppModel)
-	if cmd != nil {
-		if msg := cmd(); msg != nil {
-			model, _ = appModel.Update(msg)
-			appModel = model.(AppModel)
-		}
-	}
-	if appModel.tags.List.Index() != 1 {
-		t.Fatalf("expected tag index 1, got %d", appModel.tags.List.Index())
-	}
-	if appModel.itemsByTag.List.Title != "beta" {
-		t.Fatalf("expected items for beta tag, got %s", appModel.itemsByTag.List.Title)
-	}
-
-	// Move back to previous tag
-	model, cmd = appModel.Update(navigation.TagDeltaMsg{Delta: -1})
-	appModel = model.(AppModel)
-	if cmd != nil {
-		if msg := cmd(); msg != nil {
-			model, _ = appModel.Update(msg)
-			appModel = model.(AppModel)
-		}
-	}
-	if appModel.tags.List.Index() != 0 {
-		t.Fatalf("expected tag index 0, got %d", appModel.tags.List.Index())
-	}
-	if appModel.itemsByTag.List.Title != "alpha" {
-		t.Fatalf("expected items for alpha tag, got %s", appModel.itemsByTag.List.Title)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nextModel, cmd := appModel.Update(navigation.TagDeltaMsg{Delta: tt.delta})
+			updated := nextModel.(AppModel)
+			if cmd != nil {
+				if msg := cmd(); msg != nil {
+					nextModel, _ = updated.Update(msg)
+					updated = nextModel.(AppModel)
+				}
+			}
+			assert.Equal(t, tt.wantIndex, updated.tags.List.Index())
+			assert.Equal(t, tt.wantTagTitle, updated.itemsByTag.List.Title)
+			appModel = updated
+		})
 	}
 }

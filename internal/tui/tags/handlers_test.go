@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/testutil"
 	"github.com/rhajizada/donezo/internal/tui/navigation"
@@ -16,18 +18,12 @@ func newTagMenu(t *testing.T) (MenuModel, func()) {
 	var err error
 
 	board, err := svc.CreateBoard(ctx, "Inbox")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
-	}
+	require.NoError(t, err)
 	item, err := svc.CreateItem(ctx, board, "task", "desc")
-	if err != nil {
-		t.Fatalf("CreateItem: %v", err)
-	}
+	require.NoError(t, err)
 	item.Tags = []string{"work"}
 	_, err = svc.UpdateItem(ctx, item)
-	if err != nil {
-		t.Fatalf("UpdateItem: %v", err)
-	}
+	require.NoError(t, err)
 
 	tagCount, _ := svc.CountItemsByTag(ctx, "work")
 
@@ -37,70 +33,70 @@ func newTagMenu(t *testing.T) (MenuModel, func()) {
 	return menu, cleanup
 }
 
-//nolint:gocognit // covering keybinding branches
 func TestTagsKeyBindings(t *testing.T) {
-	t.Run("enter opens items", func(t *testing.T) {
+	tests := []struct {
+		name      string
+		msg       tea.KeyPressMsg
+		assertCmd func(*testing.T, tea.Cmd)
+	}{
+		{
+			name: "enter opens items",
+			msg:  tea.KeyPressMsg{Code: tea.KeyEnter},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.OpenTagItemsMsg{}, cmd())
+			},
+		},
+		{
+			name: "tab switches to boards",
+			msg:  tea.KeyPressMsg{Code: tea.KeyTab},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.SwitchMainViewMsg{View: navigation.ViewBoards}, cmd())
+			},
+		},
+		{
+			name: "delete sends delete tag message",
+			msg:  tea.KeyPressMsg{Code: 'd', Text: "d"},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(DeleteTagMsg)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "refresh sends list tags message",
+			msg:  tea.KeyPressMsg{Code: 'R', Text: "R"},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(ListTagsMsg)
+				assert.True(t, ok)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			menu, cleanup := newTagMenu(t)
+			defer cleanup()
+
+			_, cmd := menu.Update(tt.msg)
+			tt.assertCmd(t, cmd)
+		})
+	}
+
+	t.Run("copy writes to clipboard", func(t *testing.T) {
 		menu, cleanup := newTagMenu(t)
 		defer cleanup()
-
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-		if cmd == nil {
-			t.Fatalf("expected command")
-		}
-		if msg := cmd(); msg != (navigation.OpenTagItemsMsg{}) {
-			t.Fatalf("expected OpenTagItemsMsg, got %v", msg)
-		}
-	})
-
-	t.Run("tab switches to boards", func(t *testing.T) {
-		menu, cleanup := newTagMenu(t)
-		defer cleanup()
-
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-		if cmd == nil {
-			t.Fatalf("expected command")
-		}
-		if msg := cmd(); msg != (navigation.SwitchMainViewMsg{View: navigation.ViewBoards}) {
-			t.Fatalf("expected switch to boards, got %v", msg)
-		}
-	})
-
-	t.Run("delete and refresh and copy", func(t *testing.T) {
-		menu, cleanup := newTagMenu(t)
-		defer cleanup()
-
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
-		if cmd == nil {
-			t.Fatalf("expected delete command")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected DeleteTagMsg")
-		} else if _, ok := msg.(DeleteTagMsg); !ok {
-			t.Fatalf("expected DeleteTagMsg, got %T", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'R', Text: "R"})
-		if cmd == nil {
-			t.Fatalf("expected refresh command")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected ListTagsMsg")
-		} else if _, ok := msg.(ListTagsMsg); !ok {
-			t.Fatalf("expected ListTagsMsg, got %T", msg)
-		}
 
 		var captured []byte
 		prev := writeClipboardText
 		writeClipboardText = func(data []byte) { captured = append([]byte{}, data...) }
 		defer func() { writeClipboardText = prev }()
 
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
-		if cmd == nil {
-			t.Fatalf("expected copy command")
-		}
+		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
+		require.NotNil(t, cmd)
 		cmd()
-		if len(captured) == 0 {
-			t.Fatalf("expected clipboard write")
-		}
+		assert.NotEmpty(t, captured)
 	})
 }

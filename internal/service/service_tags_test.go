@@ -1,57 +1,69 @@
 package service_test
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/testutil"
 )
 
 func TestListItemsByTagListTagsAndDeleteTag(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	ctx := testutil.MustContext()
-	board := mustCreateBoard(ctx, t, svc, "Coverage")
-	itemA := mustCreateItem(ctx, t, svc, board, "a", "first")
-	itemB := mustCreateItem(ctx, t, svc, board, "b", "second")
-
-	itemA.Tags = []string{"work", "go"}
-	_ = mustUpdateItem(ctx, t, svc, itemA)
-	itemB.Tags = []string{"work"}
-	_ = mustUpdateItem(ctx, t, svc, itemB)
-
-	itemsByTag, err := svc.ListItemsByTag(ctx, "work")
-	requireNoError(t, err, "ListItemsByTag")
-	if len(*itemsByTag) != 2 {
-		t.Fatalf("expected 2 items for work tag, got %d", len(*itemsByTag))
+	tests := []struct {
+		name                string
+		itemATags           []string
+		itemBTags           []string
+		queryTag            string
+		wantItemsByTagCount int
+		wantTagCount        int
+	}{
+		{
+			name:                "list by tag list tags and delete tag",
+			itemATags:           []string{"work", "go"},
+			itemBTags:           []string{"work"},
+			queryTag:            "work",
+			wantItemsByTagCount: 2,
+			wantTagCount:        2,
+		},
 	}
 
-	tags, err := svc.ListTags(ctx)
-	requireNoError(t, err, "ListTags")
-	if len(tags) != 2 {
-		t.Fatalf("expected 2 tags, got %d", len(tags))
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
 
-	requireNoError(t, svc.DeleteTag(ctx, "work"), "DeleteTag")
-	count, err := svc.CountItemsByTag(ctx, "work")
-	requireNoError(t, err, "CountItemsByTag after delete")
-	if count != 0 {
-		t.Fatalf("expected tag count 0 after delete, got %d", count)
+			ctx := testutil.MustContext()
+			board := mustCreateBoard(ctx, t, svc, "Coverage")
+			itemA := mustCreateItem(ctx, t, svc, board, "a", "first")
+			itemB := mustCreateItem(ctx, t, svc, board, "b", "second")
+
+			itemA.Tags = tt.itemATags
+			_ = mustUpdateItem(ctx, t, svc, itemA)
+			itemB.Tags = tt.itemBTags
+			_ = mustUpdateItem(ctx, t, svc, itemB)
+
+			itemsByTag, err := svc.ListItemsByTag(ctx, tt.queryTag)
+			require.NoError(t, err)
+			assert.Len(t, *itemsByTag, tt.wantItemsByTagCount)
+
+			tags, err := svc.ListTags(ctx)
+			require.NoError(t, err)
+			assert.Len(t, tags, tt.wantTagCount)
+
+			require.NoError(t, svc.DeleteTag(ctx, tt.queryTag))
+			count, err := svc.CountItemsByTag(ctx, tt.queryTag)
+			require.NoError(t, err)
+			assert.Zero(t, count)
+		})
 	}
 }
 
 func TestItemsToMarkdownFormatting(t *testing.T) {
 	items := []service.Item{
-		{
-			Item: service.Item{}.Item,
-			Tags: []string{"work"},
-		},
-		{
-			Item: service.Item{}.Item,
-			Tags: []string{"go"},
-		},
+		{Item: service.Item{}.Item, Tags: []string{"work"}},
+		{Item: service.Item{}.Item, Tags: []string{"go"}},
 	}
 	items[0].Title = "open"
 	items[0].Description = "desc one"
@@ -59,35 +71,47 @@ func TestItemsToMarkdownFormatting(t *testing.T) {
 	items[1].Description = "desc two"
 	items[1].Completed = true
 
+	tests := []struct {
+		name   string
+		needle string
+	}{
+		{name: "renders markdown header", needle: "### Today"},
+		{name: "renders unchecked line", needle: "- [ ] **open**"},
+		{name: "renders checked line", needle: "- [X] **done**"},
+		{name: "renders description line", needle: "\t- desc two"},
+	}
+
 	md := service.ItemsToMarkdown("Today", items)
-	if !strings.Contains(md, "### Today") {
-		t.Fatalf("expected markdown header, got %q", md)
-	}
-	if !strings.Contains(md, "- [ ] **open**") {
-		t.Fatalf("expected unchecked markdown line, got %q", md)
-	}
-	if !strings.Contains(md, "- [X] **done**") {
-		t.Fatalf("expected checked markdown line, got %q", md)
-	}
-	if !strings.Contains(md, "\t- desc two") {
-		t.Fatalf("expected description line, got %q", md)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Contains(t, md, tt.needle)
+		})
 	}
 }
 
 func TestUpdateItemRejectsEmptyTags(t *testing.T) {
-	svc, cleanup := testutil.NewTestService(t)
-	defer cleanup()
-
-	ctx := testutil.MustContext()
-	board := mustCreateBoard(ctx, t, svc, "Validation")
-	item := mustCreateItem(ctx, t, svc, board, "task", "desc")
-	item.Tags = []string{"ok", ""}
-
-	updated, err := svc.UpdateItem(ctx, item)
-	if err == nil {
-		t.Fatalf("expected validation error, got updated item %+v", updated)
+	tests := []struct {
+		name   string
+		tags   []string
+		needle string
+	}{
+		{name: "rejects empty tag", tags: []string{"ok", ""}, needle: "tag must not be empty"},
 	}
-	if !strings.Contains(err.Error(), "tag must not be empty") {
-		t.Fatalf("unexpected error %v", err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, cleanup := testutil.NewTestService(t)
+			defer cleanup()
+
+			ctx := testutil.MustContext()
+			board := mustCreateBoard(ctx, t, svc, "Validation")
+			item := mustCreateItem(ctx, t, svc, board, "task", "desc")
+			item.Tags = tt.tags
+
+			updated, err := svc.UpdateItem(ctx, item)
+			assert.Nil(t, updated)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.needle)
+		})
 	}
 }

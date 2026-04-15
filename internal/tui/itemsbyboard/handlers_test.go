@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rhajizada/donezo/internal/repository"
 	"github.com/rhajizada/donezo/internal/service"
@@ -18,13 +20,9 @@ func newItemMenu(t *testing.T) (MenuModel, func()) {
 	svc, cleanup := testutil.NewTestService(t)
 	ctx := testutil.MustContext()
 	board, err := svc.CreateBoard(ctx, "Inbox")
-	if err != nil {
-		t.Fatalf("CreateBoard: %v", err)
-	}
+	require.NoError(t, err)
 	item, err := svc.CreateItem(ctx, board, "task", "desc")
-	if err != nil {
-		t.Fatalf("CreateItem: %v", err)
-	}
+	require.NoError(t, err)
 
 	parent := boards.New(ctx, svc)
 	parent.List.SetItems(boards.NewList(&[]service.Board{*board}))
@@ -36,105 +34,106 @@ func newItemMenu(t *testing.T) (MenuModel, func()) {
 	return menu, cleanup
 }
 
-//nolint:gocognit // covering keybinding branches
 func TestItemsByBoardKeyBindings(t *testing.T) {
-	t.Run("back sends BackMsg", func(t *testing.T) {
-		menu, cleanup := newItemMenu(t)
-		defer cleanup()
+	tests := []struct {
+		name        string
+		msg         tea.KeyPressMsg
+		assertModel func(*testing.T, MenuModel)
+		assertCmd   func(*testing.T, tea.Cmd)
+	}{
+		{
+			name: "back sends back message",
+			msg:  tea.KeyPressMsg{Code: tea.KeyBackspace},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.BackMsg{}, cmd())
+			},
+		},
+		{
+			name: "create enters create state",
+			msg:  tea.KeyPressMsg{Code: 'a', Text: "a"},
+			assertModel: func(t *testing.T, menu MenuModel) {
+				assert.Equal(t, CreateItemNameState, menu.Context.State)
+			},
+		},
+		{
+			name: "rename enters rename state",
+			msg:  tea.KeyPressMsg{Code: 'r', Text: "r"},
+			assertModel: func(t *testing.T, menu MenuModel) {
+				assert.Equal(t, RenameItemNameState, menu.Context.State)
+			},
+		},
+		{
+			name: "update tags enters update tags state",
+			msg:  tea.KeyPressMsg{Code: 't', Text: "t"},
+			assertModel: func(t *testing.T, menu MenuModel) {
+				assert.Equal(t, UpdateTagsState, menu.Context.State)
+			},
+		},
+		{
+			name: "delete sends delete message",
+			msg:  tea.KeyPressMsg{Code: 'd', Text: "d"},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(DeleteItemMsg)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "refresh sends list items message",
+			msg:  tea.KeyPressMsg{Code: 'R', Text: "R"},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(ListItemsMsg)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "space toggles completion",
+			msg:  tea.KeyPressMsg{Code: tea.KeySpace, Text: " "},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				_, ok := cmd().(ToggleItemMsg)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "tab moves to next board",
+			msg:  tea.KeyPressMsg{Code: tea.KeyTab},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.BoardDeltaMsg{Delta: 1}, cmd())
+			},
+		},
+		{
+			name: "shift tab moves to previous board",
+			msg:  tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift},
+			assertCmd: func(t *testing.T, cmd tea.Cmd) {
+				require.NotNil(t, cmd)
+				assert.Equal(t, navigation.BoardDeltaMsg{Delta: -1}, cmd())
+			},
+		},
+	}
 
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
-		if cmd == nil {
-			t.Fatalf("expected command")
-		}
-		if msg := cmd(); msg != (navigation.BackMsg{}) {
-			t.Fatalf("expected BackMsg, got %v", msg)
-		}
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			menu, cleanup := newItemMenu(t)
+			defer cleanup()
 
-	t.Run("create enters input states", func(t *testing.T) {
-		menu, cleanup := newItemMenu(t)
-		defer cleanup()
+			if tt.name == "update tags enters update tags state" {
+				menu.Context.State = DefaultState
+			}
 
-		model, _ := menu.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
-		menu = model.(MenuModel)
-		if menu.Context.State != CreateItemNameState {
-			t.Fatalf("expected create name state, got %v", menu.Context.State)
-		}
-	})
-
-	t.Run("rename and update tags enter states", func(t *testing.T) {
-		menu, cleanup := newItemMenu(t)
-		defer cleanup()
-
-		model, _ := menu.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
-		menu = model.(MenuModel)
-		if menu.Context.State != RenameItemNameState {
-			t.Fatalf("expected rename name state, got %v", menu.Context.State)
-		}
-
-		menu.Context.State = DefaultState
-		model, _ = menu.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
-		menu = model.(MenuModel)
-		if menu.Context.State != UpdateTagsState {
-			t.Fatalf("expected update tags state, got %v", menu.Context.State)
-		}
-	})
-
-	t.Run("delete and refresh commands", func(t *testing.T) {
-		menu, cleanup := newItemMenu(t)
-		defer cleanup()
-
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
-		if cmd == nil {
-			t.Fatalf("expected delete command")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected DeleteItemMsg")
-		} else if _, ok := msg.(DeleteItemMsg); !ok {
-			t.Fatalf("expected DeleteItemMsg, got %T", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'R', Text: "R"})
-		if cmd == nil {
-			t.Fatalf("expected refresh command")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected ListItemsMsg")
-		} else if _, ok := msg.(ListItemsMsg); !ok {
-			t.Fatalf("expected ListItemsMsg, got %T", msg)
-		}
-	})
-
-	t.Run("toggle complete and navigation", func(t *testing.T) {
-		menu, cleanup := newItemMenu(t)
-		defer cleanup()
-
-		_, cmd := menu.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
-		if cmd == nil {
-			t.Fatalf("expected toggle command")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected ToggleItemMsg")
-		} else if _, ok := msg.(ToggleItemMsg); !ok {
-			t.Fatalf("expected ToggleItemMsg, got %T", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-		if cmd == nil {
-			t.Fatalf("expected next board command")
-		}
-		if msg := cmd(); msg != (navigation.BoardDeltaMsg{Delta: 1}) {
-			t.Fatalf("expected BoardDeltaMsg +1, got %v", msg)
-		}
-
-		_, cmd = menu.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
-		if cmd == nil {
-			t.Fatalf("expected previous board command")
-		}
-		if msg := cmd(); msg != (navigation.BoardDeltaMsg{Delta: -1}) {
-			t.Fatalf("expected BoardDeltaMsg -1, got %v", msg)
-		}
-	})
+			model, cmd := menu.Update(tt.msg)
+			menu = model.(MenuModel)
+			if tt.assertModel != nil {
+				tt.assertModel(t, menu)
+			}
+			if tt.assertCmd != nil {
+				tt.assertCmd(t, cmd)
+			}
+		})
+	}
 
 	t.Run("copy and paste", func(t *testing.T) {
 		menu, cleanup := newItemMenu(t)
@@ -146,13 +145,9 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 		defer func() { writeClipboardText = prevWrite }()
 
 		_, cmd := menu.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
-		if cmd == nil {
-			t.Fatalf("expected copy cmd")
-		}
+		require.NotNil(t, cmd)
 		cmd()
-		if len(captured) == 0 {
-			t.Fatalf("expected clipboard write")
-		}
+		assert.NotEmpty(t, captured)
 
 		clipItem := service.Item{
 			Item: repository.Item{
@@ -160,19 +155,15 @@ func TestItemsByBoardKeyBindings(t *testing.T) {
 				Description: "desc",
 			},
 		}
-		data, _ := json.Marshal(clipItem)
+		data, err := json.Marshal(clipItem)
+		require.NoError(t, err)
 		prevRead := readClipboardText
 		readClipboardText = func() []byte { return data }
 		defer func() { readClipboardText = prevRead }()
 
 		_, cmd = menu.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
-		if cmd == nil {
-			t.Fatalf("expected paste cmd")
-		}
-		if msg := cmd(); msg == nil {
-			t.Fatalf("expected CreateItemMsg from paste")
-		} else if _, ok := msg.(CreateItemMsg); !ok {
-			t.Fatalf("expected CreateItemMsg, got %T", msg)
-		}
+		require.NotNil(t, cmd)
+		_, ok := cmd().(CreateItemMsg)
+		assert.True(t, ok)
 	})
 }

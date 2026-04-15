@@ -3,41 +3,38 @@ package itemsbytag_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rhajizada/donezo/internal/service"
 	"github.com/rhajizada/donezo/internal/tui/itemsbytag"
 )
 
 func TestItemsByTagItemAccessors(t *testing.T) {
-	base := service.Item{Item: service.Item{}.Item, Tags: []string{"work", "go"}}
-	base.Title = "task"
-	base.Description = "details"
-	base.Completed = true
-
-	item := itemsbytag.NewItem(&base).(itemsbytag.Item)
-	if item.Title() != "task" {
-		t.Fatalf("expected title task, got %q", item.Title())
-	}
-	if item.Description() != "details" {
-		t.Fatalf("expected description details, got %q", item.Description())
-	}
-	if item.FilterValue() != "task" {
-		t.Fatalf("expected filter value task, got %q", item.FilterValue())
-	}
-	if !item.HideValue() {
-		t.Fatalf("expected completed item to be hidden")
-	}
-	if item.Footer() != "Tags: work, go" {
-		t.Fatalf("unexpected footer %q", item.Footer())
+	tests := []struct {
+		name       string
+		tags       []string
+		wantFooter string
+	}{
+		{name: "tags footer renders list", tags: []string{"work", "go"}, wantFooter: "Tags: work, go"},
+		{name: "missing tags footer renders placeholder", tags: nil, wantFooter: "No tags"},
 	}
 
-	base.Tags = nil
-	item = itemsbytag.NewItem(&base).(itemsbytag.Item)
-	if item.Footer() != "No tags" {
-		t.Fatalf("unexpected footer without tags: %q", item.Footer())
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := service.Item{Item: service.Item{}.Item, Tags: tt.tags}
+			base.Title = "task"
+			base.Description = "details"
+			base.Completed = true
 
-	list := itemsbytag.NewList(&[]service.Item{base})
-	if len(list) != 1 {
-		t.Fatalf("expected 1 list item, got %d", len(list))
+			item := itemsbytag.NewItem(&base).(itemsbytag.Item)
+			assert.Equal(t, "task", item.Title())
+			assert.Equal(t, "details", item.Description())
+			assert.Equal(t, "task", item.FilterValue())
+			assert.True(t, item.HideValue())
+			assert.Equal(t, tt.wantFooter, item.Footer())
+
+			list := itemsbytag.NewList(&[]service.Item{base})
+			assert.Len(t, list, 1)
+		})
 	}
 }
