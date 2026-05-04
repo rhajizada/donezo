@@ -12,7 +12,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.6
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/charmbracelet/x/ansi v0.11.7
-	github.com/mattn/go-sqlite3 v1.14.42
+	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/pressly/goose/v3 v3.27.1
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/stretchr/testify v1.11.1
