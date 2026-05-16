@@ -14,7 +14,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/pressly/goose/v3 v3.27.1
-	github.com/sahilm/fuzzy v0.1.1
+	github.com/sahilm/fuzzy v0.1.2
 	github.com/stretchr/testify v1.11.1
 	golang.design/x/clipboard v0.7.1
 )
