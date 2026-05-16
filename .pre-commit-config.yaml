@@ -38,6 +38,12 @@ repos:
         pass_filenames: false
         files: '\.golangci\.(?:yml|yaml|toml|json)'
         entry: golangci-lint config verify
+      - id: go vet
+        name: go vet
+        language: system
+        pass_filenames: false
+        types: [go]
+        entry: go vet ./...
       - id: gotestsum
         name: gotestsum
         language: system
